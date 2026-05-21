@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { Chess } from 'chess.js';
 import type { LoadedGame, MoveStep, Square } from '@/core/chess/types';
 import { fenAtPly, lastMoveAtPly, loadEmpty, loadPgn, STARTPOS } from '@/core/chess/pgn';
@@ -113,7 +114,22 @@ interface GameState {
 
 const blank: LoadedGame = loadEmpty(STARTPOS, { title: 'New game', source: 'editor' });
 
-export const useGameStore = create<GameState>((set, get) => ({
+/** Persisted fields — kept out of inline config so we can reuse its return
+ *  type for the `migrate` callback's signature. */
+function partialize(s: GameState) {
+  return {
+    game: s.game,
+    ply: s.ply,
+    orientation: s.orientation,
+    mode: s.mode,
+    analyzeSnapshot: s.analyzeSnapshot,
+    branchPly: s.branchPly,
+  };
+}
+
+export const useGameStore = create<GameState>()(
+  persist(
+    (set, get) => ({
   game: blank,
   ply: 0,
   playing: false,
@@ -352,4 +368,49 @@ export const useGameStore = create<GameState>((set, get) => ({
     set(next);
     return true;
   },
-}));
+    }),
+    {
+      name: 'gambit:game',
+      version: 1,
+      // Persist only the data the user expects to find on reload. Skip
+      // ephemeral state (active autoplay, mid-drag promotion, in-flight
+      // engine state) and derived state (editMode, currentFen, etc.).
+      partialize,
+      // If a future release changes the LoadedGame shape, return the
+      // default (empty) state so we never crash on a stale cache. The
+      // seed effect in App.tsx will then load London System fresh.
+      migrate: (persisted, version) => {
+        // We use a type assertion here because the persist plugin's signature
+        // requires the partialized shape; returning a default-shaped object is
+        // safe and lets Zustand overwrite with our initial state.
+        if (version !== 1) {
+          return {
+            game: blank,
+            ply: 0,
+            orientation: 'white' as const,
+            mode: 'visualizer' as const,
+            analyzeSnapshot: null,
+            branchPly: null,
+          };
+        }
+        return persisted as ReturnType<typeof partialize>;
+      },
+      // After hydration, fix up any combinations that can't be valid because
+      // sibling stores don't persist:
+      //   - puzzleStore's `active` puzzle isn't persisted, so a stored
+      //     mode='puzzle' would land the user in a puzzle UI with no puzzle.
+      //     Drop back to visualizer.
+      // Also derive `editMode` from `mode` (intentionally NOT persisted so
+      // it can never disagree with the mode), and reset transient flags.
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        if (state.mode === 'puzzle') {
+          state.mode = 'visualizer';
+        }
+        state.editMode = state.mode === 'composer' || state.mode === 'analyze';
+        state.playing = false;
+        state.pendingPromotion = null;
+      },
+    },
+  ),
+);
