@@ -1,6 +1,6 @@
 import { useGameStore } from '@/core/store/gameStore';
 import type { GameMode } from '@/core/store/gameStore';
-import { Crown, Eye, Pencil, Microscope, Puzzle } from 'lucide-react';
+import { Crown, Eye, Pencil, Microscope, Puzzle, Swords } from 'lucide-react';
 import clsx from 'clsx';
 
 export function Header() {
@@ -82,5 +82,11 @@ const BADGE_META: Record<GameMode, { label: string; tooltip: string; cls: string
     tooltip: 'Puzzle — solve the tactic',
     cls: 'border-good/50 bg-good/10 text-good',
     icon: <Puzzle size={10} />,
+  },
+  pvp: {
+    label: 'Live',
+    tooltip: 'PvP — live game over LAN',
+    cls: 'border-accent/50 bg-accent/10 text-accent',
+    icon: <Swords size={10} />,
   },
 };

@@ -16,9 +16,9 @@ export type PieceSetId =
   | 'letter';
 export type RenderMode = '2d' | '3d';
 
-export type PanelView = 'openings' | 'import' | 'export' | 'settings' | 'puzzles';
+export type PanelView = 'openings' | 'import' | 'export' | 'settings' | 'puzzles' | 'pvp';
 /** Which bottom-sheet is open on mobile; null = closed. */
-export type MobileSheet = 'moves' | 'idea' | 'browse' | null;
+export type MobileSheet = 'moves' | 'idea' | 'browse' | 'match' | null;
 
 interface UiState {
   boardTheme: BoardThemeId;
@@ -32,6 +32,8 @@ interface UiState {
   animationMs: number;
   activePanel: PanelView;
   mobileSheet: MobileSheet;
+  /** Mute PvP sound cues (move click, low-time tick, flag, start, end). */
+  pvpMuted: boolean;
   setBoardTheme: (t: BoardThemeId) => void;
   setPieceSet: (p: PieceSetId) => void;
   setRenderMode: (m: RenderMode) => void;
@@ -42,6 +44,7 @@ interface UiState {
   setAnimationMs: (ms: number) => void;
   setActivePanel: (p: PanelView) => void;
   setMobileSheet: (s: MobileSheet) => void;
+  setPvpMuted: (v: boolean) => void;
 }
 
 export const useUiStore = create<UiState>()(
@@ -57,6 +60,7 @@ export const useUiStore = create<UiState>()(
       animationMs: 220,
       activePanel: 'openings',
       mobileSheet: null,
+      pvpMuted: false,
       setBoardTheme: (t) => set({ boardTheme: t }),
       setPieceSet: (p) => set({ pieceSet: p }),
       setRenderMode: (m) => set({ renderMode: m }),
@@ -67,6 +71,7 @@ export const useUiStore = create<UiState>()(
       setAnimationMs: (ms) => set({ animationMs: ms }),
       setActivePanel: (p) => set({ activePanel: p }),
       setMobileSheet: (s) => set({ mobileSheet: s }),
+      setPvpMuted: (v) => set({ pvpMuted: v }),
     }),
     {
       name: 'gambit:ui',
@@ -82,6 +87,7 @@ export const useUiStore = create<UiState>()(
         // showBestMove intentionally NOT persisted — it's a per-session affordance.
         animationMs: s.animationMs,
         activePanel: s.activePanel,
+        pvpMuted: s.pvpMuted,
       }),
     },
   ),

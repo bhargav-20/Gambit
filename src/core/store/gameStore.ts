@@ -25,8 +25,12 @@ export type Promotable = 'q' | 'r' | 'b' | 'n';
  *  - 'puzzle':     Solving a tactic. Edit on but restricted — only the
  *                  correct next move is accepted. No engine. No composer
  *                  UI; the puzzle owns the panel.
+ *  - 'pvp':        Live two-player game over a WebRTC data channel. Board
+ *                  input is gated to the local player's color when it's
+ *                  their turn. The pvpStore owns connection + clocks and
+ *                  wires moves through applyMove just like every other mode.
  */
-export type GameMode = 'visualizer' | 'composer' | 'analyze' | 'puzzle';
+export type GameMode = 'visualizer' | 'composer' | 'analyze' | 'puzzle' | 'pvp';
 
 export interface PendingPromotion {
   from: Square;
@@ -110,6 +114,14 @@ interface GameState {
   startPuzzle: () => void;
   /** Leave puzzle mode back to visualizer. */
   endPuzzle: () => void;
+
+  /** Enter PvP mode at a fresh starting position. editMode=true because the
+   *  board needs to accept input — pvpStore.localColor + turn gating in
+   *  Board2D restrict it to the right side at the right time. */
+  startPvp: () => void;
+  /** Leave PvP back to visualizer. The played game stays loaded so the user
+   *  can scrub through it or hit "Analyze this game". */
+  endPvp: () => void;
 }
 
 const blank: LoadedGame = loadEmpty(STARTPOS, { title: 'New game', source: 'editor' });
@@ -322,6 +334,18 @@ export const useGameStore = create<GameState>()(
     playing: false,
   }),
 
+  startPvp: () => set({
+    game: loadEmpty(STARTPOS, { title: 'Live game', source: 'editor' }),
+    ply: 0,
+    playing: false,
+    mode: 'pvp',
+    editMode: true,
+    analyzeSnapshot: null,
+    branchPly: null,
+  }),
+
+  endPvp: () => set({ mode: 'visualizer', editMode: false, playing: false }),
+
   truncateAfterCurrent: () => {
     const { game, ply } = get();
     if (ply >= game.moves.length) return;
@@ -405,6 +429,12 @@ export const useGameStore = create<GameState>()(
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         if (state.mode === 'puzzle') {
+          state.mode = 'visualizer';
+        }
+        // PvP can't survive a reload — the WebRTC channel is gone. Drop back
+        // to visualizer so the user lands on the played game instead of an
+        // empty PvP shell with no opponent.
+        if (state.mode === 'pvp') {
           state.mode = 'visualizer';
         }
         state.editMode = state.mode === 'composer' || state.mode === 'analyze';

@@ -8,6 +8,8 @@ import { useGameStore } from '@/core/store/gameStore';
 import { useUiStore } from '@/core/store/uiStore';
 import { usePuzzleStore } from '@/core/store/puzzleStore';
 import { useAnalysisStore } from '@/core/store/analysisStore';
+import { usePvpStore } from '@/core/store/pvpStore';
+import { sendLocalMove } from '@/features/pvp/session';
 import { dests, turnColor } from '@/core/chess/legal';
 import type { Square } from '@/core/chess/types';
 import { PromotionPicker } from './PromotionPicker';
@@ -52,27 +54,38 @@ export function Board2D({ maxSize }: Props) {
   const animationMs = useUiStore((s) => s.animationMs);
   const mode = useGameStore((s) => s.mode);
   const bestMove = useAnalysisStore((s) => s.snapshot?.bestMove ?? null);
+  const pvpLocalColor = usePvpStore((s) => s.localColor);
+  const pvpResult = usePvpStore((s) => s.result);
 
   // Mount chessground once.
   useEffect(() => {
     if (!hostRef.current) return;
     const fen = useGameStore.getState().currentFen();
     const last = useGameStore.getState().lastMoveSquares();
+    const tc0 = turnColor(fen);
+    // In PvP, the board only accepts input from the local player AND only on
+    // their turn, AND not after the game has ended.
+    const movableColor0 =
+      mode === 'pvp'
+        ? (pvpResult ? undefined : pvpLocalColor === tc0 ? tc0 : undefined)
+        : editMode
+          ? tc0
+          : undefined;
     const config: Config = {
       fen,
       // chessground's configure() does NOT read side-to-move from the FEN —
       // it just updates pieces. We have to pass turnColor explicitly so that
       // canMove() (which compares state.turnColor to piece.color) accepts
       // moves by the actual side to move.
-      turnColor: turnColor(fen),
+      turnColor: tc0,
       orientation,
       coordinates: true,                    // always rendered; CSS hides them when toggled off
       lastMove: last ? [last[0], last[1]] : undefined,
       animation: { enabled: true, duration: animationMs },
       movable: {
         free: false,
-        color: editMode ? turnColor(fen) : undefined,
-        dests: editMode ? dests(fen) : new Map(),
+        color: movableColor0,
+        dests: movableColor0 ? dests(fen) : new Map(),
         showDests: showLegalDots,
         events: {
           after: (from, to) => {
@@ -135,6 +148,12 @@ export function Board2D({ maxSize }: Props) {
             if (!ok) {
               // chessground already moved the piece visually; revert by re-syncing.
               apiRef.current?.set({ fen: useGameStore.getState().currentFen() });
+              return;
+            }
+            // PvP: ship the move over the channel. sendLocalMove also updates
+            // the pvpStore clock so our own clock UI swaps to inactive.
+            if (useGameStore.getState().mode === 'pvp') {
+              sendLocalMove(`${from}${to}`);
             }
           },
         },
@@ -161,18 +180,25 @@ export function Board2D({ maxSize }: Props) {
     const fen = useGameStore.getState().currentFen();
     const last = useGameStore.getState().lastMoveSquares();
     const tc = turnColor(fen);
+    // PvP gating: only when it's our turn AND the game hasn't ended.
+    const movableColor =
+      mode === 'pvp'
+        ? (pvpResult ? undefined : pvpLocalColor === tc ? tc : undefined)
+        : editMode
+          ? tc
+          : undefined;
     api.set({
       fen,
       turnColor: tc,
       lastMove: last ? ([last[0], last[1]] as Key[]) : undefined,
       animation: { enabled: true, duration: animationMs },
       movable: {
-        color: editMode ? tc : undefined,
-        dests: editMode ? dests(fen) : new Map(),
+        color: movableColor,
+        dests: movableColor ? dests(fen) : new Map(),
         showDests: showLegalDots,
       },
     });
-  }, [game, ply, editMode, showLegalDots, animationMs]);
+  }, [game, ply, editMode, showLegalDots, animationMs, mode, pvpLocalColor, pvpResult]);
 
   // Sync orientation.
   useEffect(() => {

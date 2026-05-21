@@ -1,17 +1,37 @@
 import { useUiStore } from '@/core/store/uiStore';
 import { useGameStore } from '@/core/store/gameStore';
-import { List, Lightbulb, LayoutGrid } from 'lucide-react';
+import { List, Lightbulb, LayoutGrid, Swords } from 'lucide-react';
 import clsx from 'clsx';
 
 /**
- * Three large tap targets visible only on mobile. They open bottom-sheet
- * drawers for the move list, the opening idea, and the sidebar panels.
- * On desktop these surfaces are visible inline, so this whole bar hides.
+ * Three large tap targets visible only on mobile. In visualizer/composer
+ * modes they open Moves / Idea / Browse drawers. In PvP, the Moves+Idea
+ * pair is replaced with a Match drawer that holds the resign/draw controls
+ * and the in-progress move list.
  */
 export function MobileActions() {
   const setSheet = useUiStore((s) => s.setMobileSheet);
   const moveCount = useGameStore((s) => s.game.moves.length);
   const hasIdea = useGameStore((s) => Boolean(s.game.meta.openingId));
+  const mode = useGameStore((s) => s.mode);
+
+  if (mode === 'pvp') {
+    return (
+      <div className="lg:hidden grid grid-cols-2 gap-2">
+        <Action
+          icon={<Swords size={16} />}
+          label="Match"
+          sub={moveCount > 0 ? `${moveCount}` : undefined}
+          onClick={() => setSheet('match')}
+        />
+        <Action
+          icon={<LayoutGrid size={16} />}
+          label="Browse"
+          onClick={() => setSheet('browse')}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="lg:hidden grid grid-cols-3 gap-2">

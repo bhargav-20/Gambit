@@ -34,6 +34,7 @@ export default {
         },
         good: '#7bd389',
         bad: '#ef6f6f',
+        warn: '#e9b465',
       },
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],

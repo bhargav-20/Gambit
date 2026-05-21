@@ -5,12 +5,14 @@ import { ImportPanel } from '@/features/import/ImportPanel';
 import { ExportPanel } from '@/features/export/ExportPanel';
 import { ThemePanel } from '@/features/themes/ThemePanel';
 import { PuzzlePanel } from '@/features/puzzles/PuzzlePanel';
-import { BookOpen, ClipboardPaste, Palette, Video, Puzzle } from 'lucide-react';
+import { PvpLobby } from '@/features/pvp/PvpLobby';
+import { BookOpen, ClipboardPaste, Palette, Video, Puzzle, Swords } from 'lucide-react';
 import clsx from 'clsx';
 
 const TABS: Array<{ id: PanelView; label: string; icon: React.ReactNode }> = [
   { id: 'openings', label: 'Openings', icon: <BookOpen size={16} /> },
   { id: 'puzzles', label: 'Puzzles', icon: <Puzzle size={16} /> },
+  { id: 'pvp', label: 'Play', icon: <Swords size={16} /> },
   { id: 'import', label: 'Compose', icon: <ClipboardPaste size={16} /> },
   { id: 'export', label: 'Export', icon: <Video size={16} /> },
   { id: 'settings', label: 'Theme', icon: <Palette size={16} /> },
@@ -56,9 +58,10 @@ export function Sidebar() {
           {activeTab.label}
         </div>
       )}
-      <div className="flex-1 min-h-0 p-4">
+      <div className="flex-1 min-h-0 p-4 overflow-y-auto">
         {active === 'openings' && <OpeningsPanel />}
         {active === 'puzzles' && <PuzzlePanel />}
+        {active === 'pvp' && <PvpLobby />}
         {active === 'import' && <ImportPanel />}
         {active === 'export' && <ExportPanel />}
         {active === 'settings' && <ThemePanel />}

@@ -3,6 +3,7 @@ import type { Promotable } from '@/core/store/gameStore';
 import { useUiStore } from '@/core/store/uiStore';
 import { findPieceSet } from '@/features/themes/piecesets';
 import type { PieceCode } from '@/features/themes/piecesets';
+import { sendLocalMove } from '@/features/pvp/session';
 
 /**
  * Floating overlay that lets the user pick Q/R/B/N when a pawn reaches the
@@ -18,6 +19,18 @@ export function PromotionPicker() {
   const set = findPieceSet(pieceSetId);
 
   if (!pending) return null;
+
+  const onPick = (c: Promotable) => {
+    const wasPvp = useGameStore.getState().mode === 'pvp';
+    const from = pending.from;
+    const to = pending.to;
+    resolve(c);
+    // In PvP, resolvePromotion has already pushed the move through applyMove;
+    // ship the UCI (with promotion char) over the wire so the opponent applies it.
+    if (wasPvp) {
+      sendLocalMove(`${from}${to}${c}`);
+    }
+  };
 
   const fileIdx = pending.to.charCodeAt(0) - 'a'.charCodeAt(0); // 0..7
   // Column the promotion square sits in, accounting for board orientation.
@@ -52,7 +65,7 @@ export function PromotionPicker() {
         {choices.map((c) => (
           <button
             key={c}
-            onClick={() => resolve(c)}
+            onClick={() => onPick(c)}
             className="aspect-square w-full flex items-center justify-center hover:bg-accent/20 transition-colors"
             title={c.toUpperCase()}
           >

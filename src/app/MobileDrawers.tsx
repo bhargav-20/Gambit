@@ -2,6 +2,7 @@ import { useUiStore } from '@/core/store/uiStore';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { MoveList } from '@/features/playback/MoveList';
 import { IdeaPanel } from '@/features/openings/IdeaPanel';
+import { PvpMatchPanel } from '@/features/pvp/PvpMatchPanel';
 import { Sidebar } from './Sidebar';
 
 /**
@@ -29,6 +30,9 @@ export function MobileDrawers() {
         <div className="h-full -m-4">
           <Sidebar />
         </div>
+      </BottomSheet>
+      <BottomSheet open={sheet === 'match'} onClose={close} title="Match" heightVh={0.7}>
+        <PvpMatchPanel />
       </BottomSheet>
     </>
   );
