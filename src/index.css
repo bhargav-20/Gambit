@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* chessground base styling lives in src/features/themes/chessground-theme.css and is imported lazily */
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+  html, body, #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-bg text-ink antialiased font-sans;
+    background-image:
+      radial-gradient(1200px 600px at 80% -10%, rgba(233,180,101,0.08), transparent 60%),
+      radial-gradient(900px 500px at 10% 110%, rgba(110,140,200,0.06), transparent 60%);
+    background-attachment: fixed;
+  }
+  ::selection {
+    background: rgba(233,180,101,0.35);
+  }
+  /* Tighter scrollbars inside panels */
+  .panel ::-webkit-scrollbar,
+  .panel-tight ::-webkit-scrollbar { width: 8px; height: 8px; }
+  .panel ::-webkit-scrollbar-thumb,
+  .panel-tight ::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.08);
+    border-radius: 999px;
+  }
+}
+
+@layer components {
+  .panel {
+    @apply bg-bg-panel backdrop-blur-xl border border-edge rounded-2xl shadow-glass;
+  }
+  .panel-tight {
+    @apply bg-bg-raised border border-edge rounded-xl;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium
+           border border-edge bg-bg-raised hover:bg-bg-subtle hover:border-edge-strong
+           transition-colors disabled:opacity-40 disabled:cursor-not-allowed select-none;
+  }
+  .btn-primary {
+    @apply btn bg-accent text-bg border-accent hover:bg-accent-soft hover:border-accent-soft;
+  }
+  .btn-ghost {
+    @apply btn border-transparent bg-transparent hover:bg-bg-subtle;
+  }
+  .btn-icon {
+    @apply btn h-9 w-9 p-0 justify-center;
+  }
+  .input {
+    @apply w-full rounded-lg border border-edge bg-bg-raised px-3 py-2 text-sm
+           placeholder:text-ink-faint focus:outline-none focus:border-accent/60
+           focus:ring-2 focus:ring-accent/20 transition;
+  }
+  .label {
+    @apply text-xs uppercase tracking-wider text-ink-muted font-medium;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-edge bg-bg-raised
+           px-2.5 py-0.5 text-xs text-ink-muted;
+  }
+  .chip-accent {
+    @apply chip border-accent/40 text-accent;
+  }
+  .divider {
+    @apply h-px w-full bg-edge;
+  }
+}
