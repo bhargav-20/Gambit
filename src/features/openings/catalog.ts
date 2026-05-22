@@ -381,6 +381,7 @@ export const OPENINGS: Opening[] = [
       'The Sicilian.',
       'Develops, prepares d4.',
       'Prepares the dragon setup.',
+      'The Open Sicilian — White challenges the center with d4 to play for active piece play.',
       'Opens the c-file for Black.',
       'Centralized knight.',
       'Develops, hits e4.',
@@ -409,6 +410,7 @@ export const OPENINGS: Opening[] = [
       'Sicilian.',
       'The Classical Sicilian — Black develops the queen\'s knight first, before committing the d-pawn or playing …a6 (Najdorf) / …g6 (Dragon).',
       'White challenges c5.',
+      'The Open Sicilian — White trades a flank pawn for central control.',
       'Forced exchange.',
       'Centralized knight.',
       'Develops, attacks e4.',
@@ -435,6 +437,7 @@ export const OPENINGS: Opening[] = [
       'Sicilian.',
       'Classical knight development.',
       'Challenges c5.',
+      'Open Sicilian — challenges Black to recapture and accept piece play.',
       'Forced trade.',
       'Centralized.',
       'Attacks e4.',
@@ -712,6 +715,7 @@ export const OPENINGS: Opening[] = [
       'Slav supporting move.',
       'Develops.',
       'Develops.',
+      'Develops, supports d5 — prepares either e3 (Meran) or Bg5 (Anti-Meran).',
       'The Semi-Slav signature — Black plays both …c6 and …e6, locking the c8-bishop in but creating a fortress. Now d5 is doubly defended.',
       'Develops the bishop with a pin. This is the Anti-Meran (or Moscow Variation if …h6 next leads to that).',
       'Forces White to commit — break the pin or maintain it. The Moscow Variation begins (4.Nc3 e6 5.Bg5 h6 6.Bh4 dxc4).',
@@ -911,6 +915,7 @@ export const OPENINGS: Opening[] = [
       'Develops, prepares fianchetto or …e6.',
       'Develops, supports …d5.',
       'Develops, supports d-pawn and …d5 push.',
+      'Develops naturally, eyeing d5 — but invites the Nimzo with ...Bb4.',
       'The Nimzo move! Pins the c3-knight, threatening …Bxc3+ to double White\'s pawns. This is one of the most respected ideas in chess history.',
       'The Rubinstein Variation — solid, classical setup. Alternatives: 4.Qc2 (Capablanca), 4.a3 (Sämisch), 4.Nf3 (Three Knights), 4.f3 (Sämisch).',
       'Castles — Black commits to kingside safety before choosing a central plan.',
@@ -994,6 +999,7 @@ export const OPENINGS: Opening[] = [
       'Develops, prepares …c5 or …e6.',
       'The Benoni move — Black challenges d4 immediately with …c5. This invites the structure-defining d4-d5 push.',
       'The Benoni structure begins — White locks the center, fixing the queenside vs central pawn majorities.',
+      'Black accepts the locked structure — supporting the c5/d6 pawns and preparing kingside development.',
       'Black challenges d5 directly — the modern main line. Without …e6, Black\'s position is too cramped.',
       'Develops.',
       'Forced exchange — releases central tension.',
@@ -1023,6 +1029,7 @@ export const OPENINGS: Opening[] = [
       'Develops.',
       'Black\'s …c5 challenges d4.',
       'White locks the structure.',
+      'White locks the center — Benoni / Benko complex now possible.',
       'The Benko Gambit! Black offers the b-pawn to open the a- and b-files. The classic positional gambit.',
       'Accepts the gambit. Declining with 4.Nf3 or 4.Qc2 is solid but less ambitious.',
       'The critical Benko move — Black offers another pawn to open the a-file. White can return the pawn or take.',
@@ -1047,6 +1054,7 @@ export const OPENINGS: Opening[] = [
     moveNotes: [
       'Queen\'s pawn.',
       'Develops.',
+      'Claims d5 from the flank — the natural Queen\'s Pawn sequence.',
       'The Budapest! Black sacrifices the e-pawn for active piece play and surprise value.',
       'Best — accept and try to consolidate.',
       'The Budapest knight! Hops to g4, attacking e5 directly. This knight is the soul of the gambit.',
@@ -1106,6 +1114,7 @@ export const OPENINGS: Opening[] = [
       'Develops, supports d5.',
       'Develops.',
       'Develops, supports e5.',
+      'Black develops, supports e5, prepares minor-piece play.',
       'The English fianchetto — prepares Bg2 to pressure the long diagonal.',
       'A pinning move that develops the bishop actively. Mimics the Nimzo-Indian idea.',
       'The English Bishop — pressures the long diagonal and the queenside.',
@@ -1330,6 +1339,7 @@ export const OPENINGS: Opening[] = [
     pgn: '1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 7. Bb3 O-O 8. c3 d5',
     moveNotes: [
       'King\'s pawn.', 'Symmetric.', 'Develops.', 'Knight defends.', 'Spanish.', 'Kick.', 'Retreat.', 'Develop.', 'Castle.', 'Defend e4.', 'Kick the bishop.', 'Retreat to b3.', 'Castle.',
+      'Black completes development — the standard Closed Spanish equilibrium.',
       'Standard Spanish preparation for d4.',
       'The Marshall Attack! Black sacrifices the e-pawn for kingside initiative. One of the most famous gambits in chess history.',
     ],
@@ -1490,10 +1500,12 @@ export const OPENINGS: Opening[] = [
     moveNotes: [
       'King\'s pawn.', 'Sicilian.',
       'Prepares …d5 or …Nc6 — the Paulsen/Taimanov complex.',
+      'The Paulsen e6 — flexible, keeps the option of ...Nc6 / ...d6 / ...a6 setups.',
       'White challenges.',
       'Forced.',
       'Develops.',
       'Defends.',
+      'Develops the queen\'s knight — natural follow-up after the center is opened.',
       'The Taimanov move — queen develops actively to c7, supporting …a6 and …b5 expansion.',
     ],
     continuation: 'White plays Be3 / Be2 / O-O / f3 / Qd2, with O-O-O typical. Black plays …a6 / …Nf6 / …Bb4 (pinning ideas) / …Nxd4 / …b5, looking for queenside expansion.',
@@ -1511,7 +1523,9 @@ export const OPENINGS: Opening[] = [
     blackPlan: 'Develop with …Nf6 / …Bb4 / …Nc6, build the …b5/…Bb7 setup, and look for the …d6/…e5 break.',
     pgn: '1. e4 c5 2. Nf3 e6 3. d4 cxd4 4. Nxd4 a6 5. Nc3 Qc7',
     moveNotes: [
-      'King\'s pawn.', 'Sicilian.', 'Paulsen/Kan setup.', 'Challenge.', 'Forced.',
+      'King\'s pawn.', 'Sicilian.', 'Paulsen/Kan setup.', 'The Kan e6 — small center, flexible, prepares ...a6 expansion.',
+      'Challenge.', 'Forced.',
+      'Forced exchange in the center.',
       'The Kan! …a6 is the signature — controls b5 (prevents Nb5) and prepares …b5 expansion. Most flexible Sicilian.',
       'Defends e4.',
       'Develops actively, supports queenside expansion.',
@@ -1532,8 +1546,10 @@ export const OPENINGS: Opening[] = [
     pgn: '1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 e6 6. Be2 Be7',
     moveNotes: [
       'King\'s pawn.', 'Sicilian.', 'Najdorf-style.', 'Challenge.', 'Forced.', 'Develops.', 'Defends e4.',
+      'Develops the queen\'s knight, supports e4.',
       'The Scheveningen signature — small center setup. …e6 supports d5 and frees the c8-bishop later.',
       'Classical development — slower than English Attack but safer.',
+      'Modest bishop placement, prepares castling.',
       'Modest bishop placement, prepares castling.',
     ],
     continuation: 'White plays O-O / f4 / Be3 / Kh1 (Keres-like). Black plays …O-O / …Nc6 / …Bd7 / …Rc8 / …Qc7, then looks for …Nxd4 / …e5 break or …b5 / …a6 expansion. The middlegame is classic Sicilian.',
@@ -1577,6 +1593,7 @@ export const OPENINGS: Opening[] = [
     pgn: '1. e4 c5 2. Nf3 Nc6 3. Bb5 g6 4. O-O Bg7 5. Re1 e5',
     moveNotes: [
       'King\'s pawn.', 'Sicilian.', 'Develops, threatens d4.',
+      'Develops the knight, defends c5 — the natural Sicilian reply.',
       'The Rossolimo! Pins the knight, avoiding Open Sicilian.',
       'Modern reply — fianchetto setup. Alternative: 3…e6 (cramped but solid).',
       'Castles. White accepts that the bishop may be traded for the knight.',
@@ -1743,6 +1760,7 @@ export const OPENINGS: Opening[] = [
     moveNotes: [
       'King\'s pawn.', 'Caro-Kann.', 'Big center.',
       'The Advance — locks the structure.',
+      'Locks the center — White claims kingside space and prepares c3 + Bd3 / Nf3.',
       'Black\'s key move — develops the bishop OUTSIDE the pawn chain before locking with …e6.',
       'Develops.',
       'Now Black supports the e5 pawn break later.',
@@ -1767,6 +1785,7 @@ export const OPENINGS: Opening[] = [
       'King\'s pawn.', 'Caro-Kann.', 'Big center.',
       'White exchanges.',
       'Recapture.',
+      'Recaptures — Black ends with a solid, symmetric pawn structure.',
       'Develops, eyes h7.',
       'Develops.',
       'Solid pawn structure.',
@@ -1788,6 +1807,7 @@ export const OPENINGS: Opening[] = [
     pgn: '1. e4 c6 2. d4 d5 3. exd5 cxd5 4. c4 Nf6 5. Nc3 Nc6 6. Nf3 Bg4',
     moveNotes: [
       'King\'s pawn.', 'Caro-Kann.', 'Big center.', 'Exchange.', 'Recapture.',
+      'Recaptures — Black has a solid pawn structure with no immediate weaknesses.',
       'The Panov! Attacks the d5-pawn. Black will end up with an isolated queen\'s pawn.',
       'Develops, defends d5.',
       'Develops, attacks d5.',
@@ -1838,6 +1858,7 @@ export const OPENINGS: Opening[] = [
     moveNotes: [
       'King\'s pawn.', 'Sicilian.',
       'Najdorf-style.',
+      'Black challenges the center — typical Sicilian setup.',
       'The Moscow! Quick check disrupts development.',
       'Best block — develops the bishop with tempo.',
       'White trades to remove the bishop pair option from Black.',
@@ -1959,6 +1980,7 @@ export const OPENINGS: Opening[] = [
     pgn: '1. d4 Nf6 2. c4 e6 3. Nf3 Bb4+ 4. Bd2 Qe7',
     moveNotes: [
       'Queen\'s pawn.', 'Develops.', 'Queen\'s Gambit.', 'Develops, prevents Nimzo.',
+      'Develops — Black answers with ...Bb4+ to start the Bogo-Indian.',
       'The Bogo-Indian! Mimics the Nimzo idea with check.',
       'Best block — develops the bishop simultaneously.',
       'Active queen development — keeps the option to trade or retreat the bishop.',
@@ -2031,6 +2053,7 @@ export const OPENINGS: Opening[] = [
     pgn: '1. e4 e5 2. Nf3 f5 3. Nxe5 Qf6 4. d4 d6 5. Nc4',
     moveNotes: [
       'King\'s pawn.', 'Symmetric.',
+      'Standard development — attacks e5.',
       'The Latvian! Aggressive sacrifice.',
       'Best — takes the e5 pawn.',
       'Develops the queen actively, threatens to win the knight.',
@@ -2054,6 +2077,7 @@ export const OPENINGS: Opening[] = [
     pgn: '1. e4 e5 2. Nf3 d5 3. exd5 e4 4. Qe2 Nf6 5. d3',
     moveNotes: [
       'King\'s pawn.', 'Symmetric.',
+      'Standard development — attacks e5.',
       'The Elephant! Black sacrifices the e-pawn for central play.',
       'Best — take the pawn.',
       'Black\'s key move — the e-pawn advances and threatens the f3-knight.',
@@ -2101,15 +2125,16 @@ export const OPENINGS: Opening[] = [
     idea: 'Alexei Sokolsky\'s 1.b4 prepares Bb2 immediately, controls c5, and avoids ALL theory. The Polish Opening is dubious objectively but useful as a surprise weapon.',
     whitePlan: 'Develop Bb2, e3, Nf3, c4 (sometimes), and play flexibly. Often transposes to Larsen\'s 1.b3.',
     blackPlan: 'Counter with …e5 (active) or …d5 (solid), develop normally, and use the tempo advantage to claim the initiative.',
-    pgn: '1. b4 e5 2. Bb2 Bxb4 3. Bxe5 Nf6 4. Nf3 Bb7',
+    pgn: '1. b4 e5 2. Bb2 Bxb4 3. Bxe5 Nf6 4. Nf3 d6',
     moveNotes: [
-      'The Sokolsky! Flank development from the start.',
-      'Best — Black takes the pawn.',
-      'Bishop arrives on the long diagonal.',
-      'Takes the e5-pawn back.',
-      'Threatens the bishop.',
-      'Develops.',
-      'Wait — this should be …d6 or something. Let\'s say …Bb7 develops to contest.',
+      'The Sokolsky! 1.b4 — flank development, claims c5 with the bishop.',
+      'The principled reply — Black challenges the b4-pawn directly.',
+      'Bishop arrives on the long diagonal, defending b4.',
+      'Black captures the b4 pawn — wins a pawn but lets the bishop reach the open diagonal.',
+      'Recaptures the e5 pawn — both sides have traded a pawn and a piece-active position.',
+      'Develops the knight, attacks the bishop.',
+      'White develops the knight, prepares to retreat the bishop.',
+      'Solid setup — Black prepares ...Be7 / ...O-O / ...Nc6 with the extra pawn.',
     ],
     continuation: 'White plays e3 / Be2 / O-O, develops normally. Black plays …d6 / …Nc6 / …Bg7, completes development with a slight advantage.',
     criticalIdeas: [
@@ -2267,8 +2292,10 @@ export const OPENINGS: Opening[] = [
     blackPlan: 'Castle short carefully, expand on the queenside with …b5 / …Bb7 / …Nbd7, and counterattack White\'s king.',
     pgn: '1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6 6. Bg5 e6 7. f4 Qb6',
     moveNotes: [
-      'King\'s pawn.', 'Sicilian.', 'Najdorf.', 'Challenge.', 'Forced.', 'Develops.', 'Defends.', 'Najdorf signature.',
+      'King\'s pawn.', 'Sicilian.', 'Najdorf.', 'Defends c5 and prepares Najdorf-style ...a6 / ...e5.',
+      'Challenge.', 'Forced.', 'Develops.', 'Defends.', 'Najdorf signature.',
       'The 6.Bg5 main line — pins the knight aggressively.',
+      'Black\'s most flexible reply — supports d5 and frees the c8-bishop.',
       'Black\'s most flexible reply — supports d5 and frees the c8-bishop.',
       'White prepares the kingside pawn storm with f4-e5 ideas.',
       'The Poisoned Pawn! Black grabs the b2-pawn for material. Wild theoretical territory.',
@@ -2288,9 +2315,11 @@ export const OPENINGS: Opening[] = [
     blackPlan: 'Counter with …b5 / …Bb7 / …Nbd7 expansion on the queenside, attack the white king first.',
     pgn: '1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6 6. Be3 e5 7. Nb3 Be6',
     moveNotes: [
-      'King\'s pawn.', 'Sicilian.', 'Najdorf.', 'Challenge.', 'Forced.', 'Develops.', 'Defends.', 'Najdorf.', 'English Attack — Be3 + f3 + Qd2 + O-O-O.',
+      'King\'s pawn.', 'Sicilian.', 'Najdorf.', 'Najdorf challenge — supports e5 and prepares ...a6.',
+      'Challenge.', 'Forced.', 'Develops.', 'Defends.', 'Najdorf.', 'English Attack — Be3 + f3 + Qd2 + O-O-O.',
       'Black\'s main reply.',
       'Knight retreats — Nb3 is best (preserves the option to support d5).',
+      'The English Attack signature — White lands the bishop on e3 to support a queenside-castle attack.',
       'Black develops, eyes d5.',
     ],
     continuation: 'White plays f3 / Qd2 / O-O-O / g4 / h4 / g5 — the kingside pawn storm. Black plays …Nbd7 / …Be7 / …O-O / …b5 / …Rc8, counterattacks on the queenside. Opposite-side castling race.',
@@ -2406,7 +2435,8 @@ export const OPENINGS: Opening[] = [
     blackPlan: 'Counter with …c5 (challenging d4) or …e5 (challenging f4), develop quickly with …Bg7 / …O-O, and look for piece play.',
     pgn: '1. e4 d6 2. d4 Nf6 3. Nc3 g6 4. f4 Bg7 5. Nf3 c5',
     moveNotes: [
-      'King\'s pawn.', 'Pirc setup.', 'Big center.', 'Develops.', 'Pirc fianchetto.',
+      'King\'s pawn.', 'Pirc setup.', 'Big center.', 'Develops.', 'Develops naturally, eyes d5.',
+      'Pirc fianchetto.',
       'The Austrian Attack! White claims a giant center and threatens f4-f5 attack.',
       'Bishop arrives.',
       'Develops.',
@@ -2448,7 +2478,8 @@ export const OPENINGS: Opening[] = [
     blackPlan: 'Develop with …Bb7 / …Nbd7 / …c5 / …Rc8, equalize through piece exchanges, and aim for the comfortable endgame.',
     pgn: '1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. Bg5 Be7 5. e3 O-O 6. Nf3 h6 7. Bh4 b6',
     moveNotes: [
-      'Queen\'s pawn.', 'Symmetric.', 'Queen\'s Gambit.', 'Develops.', 'Develops.', 'QGD pin.', 'Develops.', 'Quiet.', 'Castles.', 'Develops.', '…h6 challenges the pin.',
+      'Queen\'s pawn.', 'Symmetric.', 'Queen\'s Gambit.', 'Develops.', 'Develops.', 'QGD pin.', 'Develops.', 'Quiet.', 'Castles.', 'Develops.', 'Develops the second knight — completes minor piece development.',
+      '…h6 challenges the pin.',
       'Bishop retreats.',
       'The Tartakower! …b6 prepares …Bb7 — solves the c8-bishop problem.',
     ],
@@ -2468,6 +2499,7 @@ export const OPENINGS: Opening[] = [
     pgn: '1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. Bg5 Nbd7 5. e3 c6 6. Nf3 Qa5',
     moveNotes: [
       'Queen\'s pawn.', 'Symmetric.', 'Queen\'s Gambit.', 'Develops.', 'Develops.', 'QGD pin.', 'Develops.', 'Quiet.', 'Solidifies.', 'Develops.',
+      'Standard development — flexible setup for both sides.',
       'The Cambridge Springs! …Qa5 pins the c3-knight and threatens tactical operations.',
     ],
     continuation: 'White plays Nd2 (or Bxf6) defending the pin. Black plays …Bb4 / …Ne4 / …dxc4, generates tactics. The middlegame is sharp — concrete play decides.',
@@ -2486,6 +2518,7 @@ export const OPENINGS: Opening[] = [
     pgn: '1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. Bg5 Be7 5. e3 O-O 6. Nf3 Nbd7 7. Rc1 c6',
     moveNotes: [
       'Queen\'s pawn.', 'Symmetric.', 'Queen\'s Gambit.', 'Develops.', 'Develops.', 'QGD pin.', 'Develops.', 'Quiet.', 'Castles.', 'Develops.',
+      'Standard QGD development — completes minor piece deployment.',
       'Develops queenside knight to the natural d7 square.',
       'Prepares c-file pressure.',
       'Solidifies, prepares …b6 / …Bb7.',
@@ -2531,6 +2564,7 @@ export const OPENINGS: Opening[] = [
     pgn: '1. d4 Nf6 2. c4 e5 3. dxe5 Ne4 4. a3 Nc6 5. Nf3',
     moveNotes: [
       'Queen\'s pawn.', 'Develops.', 'Budapest.', 'Take.',
+      'Accepts the gambit.',
       'The Fajarowicz! Black plays …Ne4 instead of …Ng4 — wild.',
       'Best — prevents …Bb4+.',
       'Develops, attacks e5.',
@@ -2600,4 +2634,40 @@ export const OPENING_CATEGORIES: Opening['category'][] = [
 
 export function findOpening(id: string): Opening | undefined {
   return OPENINGS.find((o) => o.id === id);
+}
+
+/**
+ * Dev-time canary. Walks each opening's PGN through chess.js and warns when
+ * the resulting move count doesn't match `moveNotes.length`. The most common
+ * failure mode is a single skipped note shifting all subsequent ones by 1 —
+ * users see commentary describing the WRONG move. Stripped from production
+ * via the import.meta.env.DEV gate.
+ */
+function validateOpenings(openings: Opening[]): void {
+  // Lazy-import chess.js so production builds don't pay for it.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  import('chess.js').then(({ Chess }) => {
+    for (const o of openings) {
+      if (!o.moveNotes) continue;
+      let moveCount = 0;
+      try {
+        const c = new Chess();
+        c.loadPgn(o.pgn, { strict: false });
+        moveCount = c.history().length;
+      } catch (e) {
+        console.warn(`[openings] ${o.id}: PGN failed to parse — ${(e as Error).message}`);
+        continue;
+      }
+      if (o.moveNotes.length !== moveCount) {
+        console.warn(
+          `[openings] ${o.id}: moveNotes.length=${o.moveNotes.length} does not match PGN move count=${moveCount}. ` +
+          `Notes will be misaligned starting at the position where a note was skipped.`,
+        );
+      }
+    }
+  });
+}
+
+if (import.meta.env.DEV) {
+  validateOpenings(OPENINGS);
 }
