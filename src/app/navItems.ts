@@ -24,5 +24,5 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Puzzles',  path: '/puzzles',   icon: createElement(Puzzle, { size: 16 }),         blurb: 'Solve tactics, track streaks' },
   { label: 'Play',     path: '/play',      icon: createElement(Swords, { size: 16 }),         blurb: 'Live game on the same WiFi — scan a QR, no account, no server' },
   { label: 'Analyze',  path: '/analyze',   icon: createElement(Microscope, { size: 16 }),     blurb: 'Play moves, branch the loaded game, get engine eval — your tinkering surface' },
-  { label: 'Games',    path: '/games',     icon: createElement(Trophy, { size: 16 }),         blurb: 'Famous games with commentary', comingSoon: true },
+  { label: 'Games',    path: '/games',     icon: createElement(Trophy, { size: 16 }),         blurb: 'Replay the games that shaped chess — Immortal, Opera, Game of the Century, more' },
 ];

@@ -56,6 +56,7 @@ export function loadPgn(pgn: string, metaOverride?: Partial<GameMeta>): LoadedGa
       eco: metaOverride?.eco ?? undef(headers.ECO),
       description: metaOverride?.description,
       openingId: metaOverride?.openingId,
+      gameId: metaOverride?.gameId,
       source: metaOverride?.source ?? 'paste',
     },
     initialFen: undef(headers.FEN) ?? STARTPOS,

@@ -1,24 +1,25 @@
-import { Link } from 'react-router-dom';
-import { Trophy, ArrowLeft } from 'lucide-react';
+import { useEffect } from 'react';
+import { useGameStore } from '@/core/store/gameStore';
+import { GamesCatalog } from '@/features/games/GamesCatalog';
 
 /**
- * `/games` — stub for the famous-games catalog (Immortal, Evergreen, Opera
- * Game, etc.). Lives on the roadmap; the route exists today so the nav
- * link goes somewhere meaningful rather than nowhere.
+ * `/games` — full-page catalog of famous games. Mirrors OpeningsRoute and
+ * PuzzlesRoute. Picking a game navigates to /games/:gameId.
  */
 export function GamesRoute() {
+  // Reset edit / puzzle / pvp leftovers on entry — the catalog page
+  // doesn't show a board but its child routes will, so leave the mode in
+  // a known-good state.
+  useEffect(() => {
+    const cur = useGameStore.getState().mode;
+    if (cur === 'puzzle' || cur === 'pvp') {
+      useGameStore.setState({ mode: 'visualizer', editMode: false });
+    }
+  }, []);
+
   return (
-    <div className="w-full max-w-2xl mx-auto p-6 sm:p-10 flex flex-col items-center text-center gap-4">
-      <div className="h-14 w-14 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent">
-        <Trophy size={24} />
-      </div>
-      <h1 className="font-display text-2xl">Famous games</h1>
-      <p className="text-ink-muted text-sm leading-relaxed max-w-md">
-        Immortal, Evergreen, Opera Game, Kasparov–Topalov &lsquo;99, the World Championship matches, AlphaZero–Stockfish — coming soon, each with a backstory, move-by-move notes, and key moments to jump to.
-      </p>
-      <Link to="/" className="btn-ghost text-xs gap-1">
-        <ArrowLeft size={12} /> Back home
-      </Link>
+    <div className="w-full max-w-3xl mx-auto p-4 sm:p-6 flex-1 min-h-0 flex flex-col gap-4">
+      <GamesCatalog />
     </div>
   );
 }

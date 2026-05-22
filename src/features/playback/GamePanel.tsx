@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { MoveList } from './MoveList';
 import { IdeaPanel } from '@/features/openings/IdeaPanel';
+import { GameStoryPanel } from '@/features/games/GameStoryPanel';
 import { useGameStore } from '@/core/store/gameStore';
-import { List, Lightbulb } from 'lucide-react';
+import { List, Lightbulb, Trophy } from 'lucide-react';
 import clsx from 'clsx';
 
 type Tab = 'moves' | 'idea';
@@ -18,7 +19,16 @@ type Tab = 'moves' | 'idea';
  */
 export function GamePanel() {
   const [tab, setTab] = useState<Tab>('moves');
-  const hasIdea = useGameStore((s) => Boolean(s.game.meta.openingId));
+  const hasOpeningIdea = useGameStore((s) => Boolean(s.game.meta.openingId));
+  const hasGameStory = useGameStore((s) => Boolean(s.game.meta.gameId));
+  const ideaAvailable = hasOpeningIdea || hasGameStory;
+
+  // The "Idea" tab swaps content based on what the loaded game IS — an
+  // opening yields the strategic overview, a famous game yields its
+  // backstory. Same affordance, different label / icon so the user
+  // knows what they're going to see.
+  const ideaLabel = hasGameStory ? 'Story' : 'Idea';
+  const IdeaIcon = hasGameStory ? Trophy : Lightbulb;
 
   return (
     <div className="flex-1 min-h-0 flex flex-col gap-2">
@@ -30,15 +40,16 @@ export function GamePanel() {
           onClick={() => setTab('moves')}
         />
         <TabButton
-          icon={<Lightbulb size={14} />}
-          label="Idea"
+          icon={<IdeaIcon size={14} />}
+          label={ideaLabel}
           active={tab === 'idea'}
           onClick={() => setTab('idea')}
-          badge={hasIdea}
+          badge={ideaAvailable}
         />
       </div>
       <div className="flex-1 min-h-0">
-        {tab === 'moves' ? <MoveList /> : <IdeaPanel />}
+        {tab === 'moves' && <MoveList />}
+        {tab === 'idea' && (hasGameStory ? <GameStoryPanel /> : <IdeaPanel />)}
       </div>
     </div>
   );

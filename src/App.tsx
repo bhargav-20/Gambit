@@ -10,6 +10,7 @@ import { PuzzleDetailRoute } from './routes/PuzzleDetailRoute';
 import { PlayRoute } from './routes/PlayRoute';
 import { AnalyzeRoute } from './routes/AnalyzeRoute';
 import { GamesRoute } from './routes/GamesRoute';
+import { GameDetailRoute } from './routes/GameDetailRoute';
 import { NotFound } from './routes/NotFound';
 
 /**
@@ -39,6 +40,7 @@ export default function App() {
             this comment so a future re-add doesn't trip on the gap. */}
         <Route path="analyze" element={<AnalyzeRoute />} />
         <Route path="games" element={<GamesRoute />} />
+        <Route path="games/:gameId" element={<GameDetailRoute />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

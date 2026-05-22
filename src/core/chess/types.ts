@@ -25,7 +25,9 @@ export interface GameMeta {
   eco?: string;          // ECO opening code
   description?: string;
   openingId?: string;    // catalog id when this game was loaded from a preset opening
-  source: 'opening' | 'paste' | 'upload' | 'editor' | 'url';
+  /** Catalog id when this game was loaded from the famous-games library. */
+  gameId?: string;
+  source: 'opening' | 'paste' | 'upload' | 'editor' | 'url' | 'famous-game';
 }
 
 export interface LoadedGame {
