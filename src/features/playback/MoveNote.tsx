@@ -1,5 +1,6 @@
 import { useGameStore } from '@/core/store/gameStore';
 import { findOpening } from '@/features/openings/catalog';
+import { findGame } from '@/features/games/catalog';
 import { Lightbulb } from 'lucide-react';
 
 /**
@@ -19,8 +20,12 @@ export function MoveNote() {
   // the right column with its own instructions.
   if (mode === 'puzzle') return null;
 
+  // Two sources of per-move commentary: the openings catalog (for loaded
+  // preset openings) and the famous-games catalog. Famous-game notes win
+  // when both are present — the user is in the more specific context.
   const opening = meta.openingId ? findOpening(meta.openingId) : undefined;
-  const note = opening?.moveNotes?.[ply - 1];
+  const famousGame = meta.gameId ? findGame(meta.gameId) : undefined;
+  const note = famousGame?.moveNotes?.[ply - 1] ?? opening?.moveNotes?.[ply - 1];
   const move = ply > 0 ? moves[ply - 1] : undefined;
   const moveNumber = ply > 0 ? Math.floor((ply - 1) / 2) + 1 : 0;
   const isWhite = (ply - 1) % 2 === 0;
@@ -46,9 +51,11 @@ export function MoveNote() {
         <p className="text-ink-faint italic">
           {ply === 0
             ? 'Press play or step forward to see commentary for each move.'
-            : opening
-            ? 'No note for this move yet — keep stepping forward.'
-            : 'Load a preset opening to see move-by-move commentary.'}
+            : famousGame
+              ? 'No note for this move — keep stepping forward to the highlights.'
+              : opening
+                ? 'No note for this move yet — keep stepping forward.'
+                : 'Load a preset opening or famous game to see move-by-move commentary.'}
         </p>
       )}
     </div>

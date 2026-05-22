@@ -1,8 +1,9 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useGameStore } from '@/core/store/gameStore';
 import { usePuzzleStore } from '@/core/store/puzzleStore';
 import { NAV_ITEMS } from '@/app/navItems';
-import { ChevronRight } from 'lucide-react';
+import { GAMES } from '@/features/games/catalog';
+import { ChevronRight, Shuffle } from 'lucide-react';
 import clsx from 'clsx';
 
 /**
@@ -22,6 +23,14 @@ export function Home() {
   const ply = useGameStore((s) => s.ply);
   const activePuzzleId = usePuzzleStore((s) => s.active?.id ?? null);
   const puzzleStatus = usePuzzleStore((s) => s.status);
+  const navigate = useNavigate();
+
+  const surpriseMe = () => {
+    // Random game from the catalog — discovery affordance for users who
+    // don't know what they want to study yet.
+    const g = GAMES[Math.floor(Math.random() * GAMES.length)];
+    navigate(`/games/${g.id}`);
+  };
 
   const hasGameContext =
     game.meta.openingId || (game.meta.source !== 'editor' && game.moves.length > 0);
@@ -75,6 +84,18 @@ export function Home() {
           </div>
         </section>
       )}
+
+      {/* Surprise-me CTA — a small affordance for users who don't have a
+          specific intent yet. Sits between "pick up" and the activity grid
+          so it doesn't compete with the resume cards (which already imply
+          intent) but does interrupt the user before they have to choose. */}
+      <button
+        onClick={surpriseMe}
+        className="panel-tight px-4 py-3 hover:border-accent/40 hover:bg-accent/[0.04] transition-colors flex items-center gap-3 self-start"
+      >
+        <Shuffle size={14} className="text-accent" />
+        <span className="text-sm text-ink">Show me a famous game at random</span>
+      </button>
 
       <section className="flex flex-col gap-3">
         <div className="label">Activities</div>

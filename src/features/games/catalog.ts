@@ -35,6 +35,10 @@ export interface FamousGame {
   outcome: string;
   /** Plies the user can jump to as "highlights" — the moves that made the game famous. */
   keyMoments: Array<{ ply: number; label: string }>;
+  /** Per-move annotations. Key is 0-indexed move position (matches MoveNote's
+   *  `ply - 1` lookup pattern used for openings). Sparse — only the moves
+   *  worth talking about. */
+  moveNotes?: Record<number, string>;
 }
 
 export const GAME_ERAS: Array<{ id: GameEra; label: string; years: string }> = [
@@ -83,6 +87,13 @@ Kieseritzky himself was the first to call it "immortal," telegraphing the game t
       { ply: 43, label: '22. Qf6+!! — the queen is given up' },
       { ply: 45, label: '23. Be7# — mate with three minor pieces' },
     ],
+    moveNotes: {
+      32: "Anderssen offers his bishop on c5 — but the rook on a1 is also hanging to ...Qxa1+. The cascade begins.",
+      34: "Bd6!! — the second rook is offered. Black greedily accepts: 18...Bxg1.",
+      40: "Nxg7+ — undermining the back rank. The king must come to d8.",
+      42: "Qf6+!! — the queen sacrifices herself to clear the e-file for the bishops.",
+      44: "Be7# — checkmate by three minor pieces against a king whose queen and rooks are still on the board.",
+    },
   },
   {
     id: 'evergreen',
@@ -121,6 +132,13 @@ The game is also a textbook for the Evans Gambit (1.e4 e5 2.Nf3 Nc6 3.Bc4 Bc5 4.
       { ply: 41, label: '21. Qxd7+!! — the queen is offered' },
       { ply: 47, label: '24. Bxe7# — bishops finish the picture' },
     ],
+    moveNotes: {
+      32: "Nf6+ — the knight is offered to weaken the king's pawn cover.",
+      36: "Rad1 — every white piece is in position.",
+      38: "Rxe7+ — deflecting Black's only defender.",
+      40: "Qxd7+!! — the famous queen sacrifice. After 21...Kxd7, the bishops sweep the dark squares.",
+      46: "Bxe7# — the position the game is named for.",
+    },
   },
   {
     id: 'opera-game',
@@ -157,6 +175,12 @@ What makes the game timeless is its honesty about chess. There is no swindle, no
       { ply: 31, label: '16. Qb8+!! — the queen is offered' },
       { ply: 33, label: '17. Rd8# — smothered mate' },
     ],
+    moveNotes: {
+      18: "Nxb5! — the knight is given up to expose the queenside.",
+      24: "Rxd7 — the rook is offered to deflect the defender.",
+      30: "Qb8+!! — the queen sacrifice that has been on every coach's whiteboard for 167 years.",
+      32: "Rd8# — smothered mate, with Black's own pieces sealing the king in.",
+    },
   },
   {
     id: 'game-of-the-century',
@@ -199,6 +223,13 @@ Byrne plays 18. Bxb6 — accepting the queen — and is then driven through a lo
       { ply: 47, label: "24. Qb4 Ra4 — Fischer's pieces swarm" },
       { ply: 81, label: '41...Rc2# — mate' },
     ],
+    moveNotes: {
+      20: "Na4!! — Fischer offers the knight to crack the queenside open.",
+      32: "Be6!! — the queen sacrifice. White must accept or lose more material.",
+      34: "Bxb6 — Byrne accepts the queen, and the long forced sequence begins.",
+      46: "Qb4 Ra4 — Fischer's pieces swarm Byrne's king.",
+      80: "Rc2# — mate, sixteen moves after the queen was offered. Fischer was 13.",
+    },
   },
   {
     id: 'fischer-spassky-g6',
@@ -241,6 +272,12 @@ The image of the reigning World Champion clapping for his challenger is one of t
       { ply: 73, label: '37. Qe4! — winning move' },
       { ply: 81, label: '41. Qf4 — Spassky resigns and applauds' },
     ],
+    moveNotes: {
+      26: "Bb5! — Fischer pins what will become Black's long-term weakness.",
+      50: "f5! — the breakthrough Fischer has been preparing since move 14.",
+      72: "Qe4! — the winning move. Black has no defense to Rxf6.",
+      80: "Qf4 — and Spassky resigns. He stood up and applauded Fischer along with the audience.",
+    },
   },
   {
     id: 'kasparovs-immortal',
@@ -285,6 +322,164 @@ Kasparov himself remembered it in his memoirs as a special moment: "I had a feel
       { ply: 71, label: '36. Bf1! — the quiet move' },
       { ply: 87, label: '44. Qa7 — resigns' },
     ],
+    moveNotes: {
+      46: "Rxd4!! — the first rook sacrifice. Topalov's d4 pawn falls, but the price is the rook.",
+      48: "Re7+ — the king hunt begins. Topalov's king will travel from b8 to d1 before resigning.",
+      62: "Qxa6+ — the second wave. Kasparov calculated this entire line at classical time control.",
+      70: "Bf1! — the quiet move that ties up the king. Often called the most beautiful single move in the game.",
+      86: "Qa7 — and Topalov resigns. The king has been driven across the entire board.",
+    },
+  },
+  {
+    id: 'steinitz-bardeleben',
+    title: 'Steinitz vs von Bardeleben — Hastings 1895',
+    players: { white: 'Wilhelm Steinitz', black: 'Curt von Bardeleben' },
+    event: 'Hastings 1895',
+    site: 'Hastings',
+    date: '1895.08.17',
+    round: '8',
+    result: '1-0',
+    era: 'classical',
+    tags: ['Brilliancy', 'Pin', 'Italian Game', 'Hastings 1895'],
+    pgn: `[Event "Hastings"]
+[Site "Hastings"]
+[Date "1895.08.17"]
+[Round "8"]
+[White "Wilhelm Steinitz"]
+[Black "Curt von Bardeleben"]
+[Result "1-0"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6 5. d4 exd4 6. cxd4 Bb4+ 7. Nc3 d5
+8. exd5 Nxd5 9. O-O Be6 10. Bg5 Be7 11. Bxd5 Bxd5 12. Nxd5 Qxd5 13. Bxe7 Nxe7
+14. Re1 f6 15. Qe2 Qd7 16. Rac1 c6 17. d5 cxd5 18. Nd4 Kf7 19. Ne6 Rhc8
+20. Qg4 g6 21. Ng5+ Ke8 22. Rxe7+ Kf8 23. Rf7+ Kg8 24. Rg7+ Kh8 25. Rxh7+ 1-0
+`,
+    narrative:
+      `Round 8 of Hastings 1895 — the strongest tournament of the 19th century — was Wilhelm Steinitz's chance to demonstrate that the deposed champion still had teeth. He sacrificed in the open, lured the Black king to f8, and built up an attack that could not be parried with normal moves.
+
+The position after 22. Rxe7+ Kf8 is one of the most-pictured in chess. White's rook is pinned, both Black rooks and the queen are doing nothing, and yet there is no defense. 23. Rf7+ Kg8 24. Rg7+ Kh8 25. Rxh7+!! — the rook has been en prise for three consecutive moves. Black plays 25...Kxh7 and runs into 26. Qh4+, with mate in ten from the position.
+
+But Black didn't play it. Curt von Bardeleben stood up, left the playing hall, and never returned. Steinitz, asked what would have happened, dictated the forced mate to the audience: 25...Kxh7 26.Qh4+ Kg7 27.Qh7+ Kf8 28.Qh8+ Ke7 29.Qg7+ Ke8 30.Qg8+ Ke7 31.Qf7+ Kd8 32.Qf8+ Qe8 33.Nf7+ Kd7 34.Qd6#. The brilliancy prize was awarded.`,
+    outcome:
+      `Steinitz, by then 59, finished fifth in the tournament behind Pillsbury, Chigorin, Lasker, and Tarrasch. The combination, however, became a textbook entry — the canonical example of a "pin so deep the pinned piece can be moved with check three times in a row."`,
+    keyMoments: [
+      { ply: 41, label: '21. Ng5+ — the king is forced to e8' },
+      { ply: 43, label: '22. Rxe7+ — the rook is pinned but untouchable' },
+      { ply: 45, label: '23. Rf7+ — and again' },
+      { ply: 47, label: '24. Rg7+ — and again' },
+      { ply: 49, label: '25. Rxh7+!! — von Bardeleben left the hall' },
+    ],
+    moveNotes: {
+      40: "Ng5+ — Black's king is forced to e8 with no safe squares.",
+      42: "Rxe7+ — the rook is en prise but the pin makes it untouchable: ...Kxe7 walks into Re1+ winning the queen.",
+      44: "Rf7+ — Steinitz keeps the king on the move.",
+      46: "Rg7+ — the rook is *still* en prise, three moves in a row.",
+      48: "Rxh7+!! — now this rook is offered too. Black is mated in 10 from any reply. Von Bardeleben left the playing hall rather than play it out.",
+    },
+  },
+  {
+    id: 'capa-tartakower',
+    title: 'Capablanca vs Tartakower — New York 1924',
+    players: { white: 'José Raúl Capablanca', black: 'Savielly Tartakower' },
+    event: 'New York 1924',
+    site: 'New York',
+    date: '1924.03.23',
+    round: '16',
+    result: '1-0',
+    era: 'classical',
+    tags: ['Endgame', 'Rook endgame', 'King activation', 'New York 1924'],
+    pgn: `[Event "New York"]
+[Site "New York"]
+[Date "1924.03.23"]
+[Round "16"]
+[White "Jose Raul Capablanca"]
+[Black "Savielly Tartakower"]
+[Result "1-0"]
+
+1. d4 f5 2. Nf3 e6 3. c4 Nf6 4. Bg5 Be7 5. Nc3 O-O 6. e3 b6 7. Bd3 Bb7 8. O-O
+Qe8 9. Qe2 Ne4 10. Bxe7 Nxc3 11. bxc3 Qxe7 12. a4 Bxf3 13. Qxf3 Nc6 14. Rfb1
+Rae8 15. Qh3 Rf6 16. f4 Na5 17. Qf3 d6 18. Re1 Qd7 19. e4 fxe4 20. Qxe4 g6
+21. g3 Kf8 22. Kg2 Rf7 23. h4 d5 24. cxd5 exd5 25. Qxe8+ Qxe8 26. Rxe8+ Kxe8
+27. h5 Rf6 28. hxg6 hxg6 29. Rh1 Kf8 30. Rh7 Rc6 31. g4 Nc4 32. g5 Ne3+
+33. Kf3 Nf5 34. Bxf5 gxf5 35. Kg3 Rxc3+ 36. Kh4 Rf3 37. g6 Rxf4+ 38. Kg5 Re4
+39. Kf6 Kg8 40. Rg7+ Kh8 41. Rxc7 Re8 42. Kxf5 Re4 43. Kf6 Rf4+ 44. Ke5 Rg4
+45. g7+ Kg8 46. Rxa7 Rg1 47. Kxd5 Rc1 48. Kd6 Rc2 49. d5 Rc1 50. Rc7 Ra1
+51. Kc6 Rxa4 52. d6 1-0
+`,
+    narrative:
+      `New York 1924 was the strongest tournament of the inter-war era — Lasker, Capablanca, Alekhine, Marshall, and Réti at the top boards. In round 16 Capablanca and Tartakower steered into a queen-trade endgame with only a slight imbalance in Capablanca's favor. What followed has been quoted in every endgame textbook since.
+
+The decisive idea appears around move 30. White's king begins marching up the board: Kf3, Kg3, Kh4, Kg5, Kf6 — by move 39 the white king has reached f6, separated from its own pieces and devastating to Black's. The black rook can do nothing but check, and after each check the white king moves *forward*. The pawns roll.
+
+Capablanca's own notes to the game in the tournament book taught generations the principle: in the endgame the king is a fighting piece. Botvinnik later cited it as one of the earliest models of "positional clarity."`,
+    outcome:
+      `Capablanca finished second in New York 1924, half a point behind Emanuel Lasker. The endgame entered every standard treatment of the subject — including Capablanca's own Chess Fundamentals — and remains the canonical example of an active king in a rook ending.`,
+    keyMoments: [
+      { ply: 59, label: '30. Rh7 — White penetrates the seventh rank' },
+      { ply: 71, label: '36. Kh4 — the king begins to march' },
+      { ply: 75, label: '38. Kg5 — king pushes into enemy territory' },
+      { ply: 77, label: '39. Kf6 — the king is now winning the game alone' },
+      { ply: 89, label: '45. g7+ — the pawns promote, Black resigns soon after' },
+    ],
+    moveNotes: {
+      58: "Rh7 — White's rook penetrates the seventh rank.",
+      70: "Kh4 — Capablanca's king begins the march. With queens off, the king is the strongest active piece.",
+      74: "Kg5 — the king pushes further into Black's territory.",
+      76: "Kf6 — the king is now winning the game by itself. Black's king is cut off.",
+      88: "g7+ — and the pawn promotes, while the king mops up.",
+    },
+  },
+  {
+    id: 'alphazero-stockfish',
+    title: 'AlphaZero vs Stockfish 8 — Game 10, December 2017',
+    players: { white: 'AlphaZero', black: 'Stockfish 8' },
+    event: 'DeepMind demonstration',
+    site: 'London (offline)',
+    date: '2017.12.04',
+    round: '10',
+    result: '1-0',
+    era: 'engine',
+    tags: ['AI', 'Engine match', 'Positional bind', 'Catalan'],
+    pgn: `[Event "DeepMind demonstration"]
+[Site "London"]
+[Date "2017.12.04"]
+[Round "10"]
+[White "AlphaZero"]
+[Black "Stockfish 8"]
+[Result "1-0"]
+
+1. Nf3 Nf6 2. c4 b6 3. d4 e6 4. g3 Ba6 5. Qc2 Bb7 6. Bg2 c5 7. d5 exd5
+8. cxd5 Nxd5 9. O-O Be7 10. Rd1 Nc6 11. Qf5 Nf6 12. e4 g6 13. Qf4 O-O 14. e5
+Nh5 15. Qg4 Re8 16. Nc3 Qb8 17. Nd5 Bf8 18. Bf4 Qc8 19. h3 Ne7 20. Ne3 Bc6
+21. Rd6 Ng7 22. Rf6 Qb7 23. Bh6 Nd5 24. Nxd5 Bxd5 25. Rd1 Ne6 26. Bxf8 Rxf8
+27. Qh4 Bc6 28. Qh6 Rae8 29. Rd6 Bxf3 30. Bxf3 Qa6 31. h4 Qa5 32. Rd1 c4
+33. Rd5 Qe1+ 34. Kg2 c3 35. bxc3 Qxc3 36. h5 Re7 37. Bd1 Qe1 38. Bb3 Rd8
+39. Rf3 Qe4 40. Qd2 Qg4 41. Bd1 Qe4 42. h6 Nc7 43. Rd6 Ne6 44. Bb3 Qxe5
+45. Rd5 Qh8 46. Qb4 Nc5 47. Rxc5 bxc5 48. Qh4 Rde8 49. Rf6 Rf8 50. Qf4 a5
+51. g4 d5 52. Bxd5 Rd7 53. Bc4 a4 54. g5 a3 55. Qf3 Rc7 56. Qxa3 Qxf6
+57. gxf6 Rfc8 58. Qd3 Rf8 59. Qd6 Rfc8 60. a4 1-0
+`,
+    narrative:
+      `In December 2017, DeepMind's AlphaZero — having taught itself chess from the rules alone in nine hours of self-play — was matched against the reigning Top Computer Chess Championship winner, Stockfish 8. Of 100 games at one-minute increments, AlphaZero won 28 and drew 72; it lost none.
+
+Game 10 of the published match is the example most chess players returned to. AlphaZero plays a Catalan, gives up a pawn for development, and then — in moves no human or engine had been seen to make — locks Stockfish's queenside pieces in a paralytic embrace. The critical sequence is moves 21–23: White plants a rook on d6 (21.Rd6), shifts it to f6 (22.Rf6), and brings the bishop to h6 (23.Bh6), all with no immediate threat. Stockfish can't move without losing.
+
+Commentators called the style "alien," "aesthetic," and "human-like" — sometimes in the same paragraph. What it certainly was: a demonstration that the search-and-evaluate approach dominant in computer chess for forty years had been quietly surpassed by neural networks trained without any human chess knowledge.`,
+    outcome:
+      `AlphaZero never played a public tournament. Its games were published as a research paper and a small book; the engine itself was retired. Its conceptual successor, Leela Chess Zero, became open-source and competitive at the top of computer chess. The match changed how engine chess is described — and influenced opening preparation, prophylaxis, and pawn-structure ideas across the elite human game.`,
+    keyMoments: [
+      { ply: 41, label: '21. Rd6 — the rook is plopped where it "should" be lost' },
+      { ply: 43, label: '22. Rf6 — and shifted with no immediate threat' },
+      { ply: 45, label: '23. Bh6 — the bind is complete' },
+      { ply: 51, label: '26. Bxf8 — the trade pays off' },
+      { ply: 119, label: '60. a4 — patience wins; Stockfish resigns' },
+    ],
+    moveNotes: {
+      40: "Rd6 — the rook is plopped on a square where, by all standard evaluation, it should be lost. AlphaZero saw deeper.",
+      42: "Rf6 — and the rook is moved to f6 with no immediate threat. Stockfish's pieces cannot organize.",
+      50: "Bxf8 — finally a concrete trade. AlphaZero's bind has paid off.",
+      118: "a4 — patient maneuvering wins. AlphaZero never relinquished the initiative.",
+    },
   },
 ];
 
@@ -314,6 +509,18 @@ function validateGames(games: FamousGame[]): void {
         console.warn(
           `[games] ${g.id}: keyMoment ply ${km.ply} out of range 0..${moveCount} (label: "${km.label}")`,
         );
+      }
+    }
+    // moveNotes keys are 0-indexed (ply - 1), so the valid range is
+    // 0..moveCount-1. Anything beyond points to a move that doesn't exist.
+    if (g.moveNotes) {
+      for (const key of Object.keys(g.moveNotes)) {
+        const n = Number(key);
+        if (n < 0 || n >= moveCount) {
+          console.warn(
+            `[games] ${g.id}: moveNote at index ${n} out of range 0..${moveCount - 1}`,
+          );
+        }
       }
     }
   }

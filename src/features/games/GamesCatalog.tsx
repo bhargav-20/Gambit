@@ -18,14 +18,25 @@ import clsx from 'clsx';
 export function GamesCatalog() {
   const [query, setQuery] = useState('');
   const [era, setEra] = useState<GameEra | 'all'>('all');
+  const [tag, setTag] = useState<string | null>(null);
   const currentId = useGameStore((s) => s.game.meta.gameId);
   const navigate = useNavigate();
   const setMobileSheet = useUiStore((s) => s.setMobileSheet);
+
+  // Collect every distinct tag across the catalog, sorted alphabetically.
+  // Memoized on GAMES (effectively constant) — recomputed only when the
+  // catalog itself grows, never on user input.
+  const allTags = useMemo(() => {
+    const set = new Set<string>();
+    for (const g of GAMES) for (const t of g.tags) set.add(t);
+    return [...set].sort();
+  }, []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return GAMES.filter((g) => {
       if (era !== 'all' && g.era !== era) return false;
+      if (tag && !g.tags.includes(tag)) return false;
       if (!q) return true;
       return (
         g.title.toLowerCase().includes(q) ||
@@ -34,7 +45,7 @@ export function GamesCatalog() {
         g.tags.some((t) => t.toLowerCase().includes(q))
       );
     });
-  }, [query, era]);
+  }, [query, era, tag]);
 
   const pick = (g: FamousGame) => {
     navigate(`/games/${g.id}`);
@@ -70,6 +81,35 @@ export function GamesCatalog() {
             onClick={() => setEra(e.id)}
           />
         ))}
+      </div>
+
+      {/* Tag chips — secondary filter, intentionally smaller than the era
+          row so the primary axis (when in chess history) stays visually
+          dominant. Clicking the active tag clears it; otherwise toggles. */}
+      <div className="flex flex-wrap gap-1">
+        {allTags.map((t) => (
+          <button
+            key={t}
+            onClick={() => setTag(tag === t ? null : t)}
+            className={clsx(
+              'rounded-full px-2 py-0.5 text-[10px] border transition-colors',
+              tag === t
+                ? 'border-accent/60 text-accent bg-accent/10'
+                : 'border-edge text-ink-faint hover:border-edge-strong hover:text-ink-muted',
+            )}
+          >
+            {t}
+          </button>
+        ))}
+        {tag && (
+          <button
+            onClick={() => setTag(null)}
+            className="rounded-full px-2 py-0.5 text-[10px] text-ink-muted hover:text-ink"
+            title="Clear tag filter"
+          >
+            ✕ clear
+          </button>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto pr-1 -mr-1 flex flex-col gap-1.5">
