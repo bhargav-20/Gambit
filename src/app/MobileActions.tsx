@@ -1,7 +1,7 @@
 import { useMatch } from 'react-router-dom';
 import { useUiStore } from '@/core/store/uiStore';
 import { useGameStore } from '@/core/store/gameStore';
-import { List, Lightbulb, BookOpen, Puzzle, ClipboardPaste, Microscope, Swords } from 'lucide-react';
+import { List, Lightbulb, BookOpen, Puzzle, Microscope, Swords } from 'lucide-react';
 import clsx from 'clsx';
 
 /**
@@ -21,7 +21,6 @@ export function MobileActions() {
   const mode = useGameStore((s) => s.mode);
   const isOpeningDetail = useMatch('/openings/:id');
   const isPuzzleDetail = useMatch('/puzzles/:id');
-  const isCompose = useMatch('/compose');
   const isAnalyze = useMatch('/analyze');
 
   if (mode === 'pvp') {
@@ -49,7 +48,6 @@ export function MobileActions() {
   let toolsButton: { icon: React.ReactNode; label: string } | null = null;
   if (isOpeningDetail) toolsButton = { icon: <BookOpen size={16} />, label: 'Catalog' };
   else if (isPuzzleDetail) toolsButton = { icon: <Puzzle size={16} />, label: 'Puzzle' };
-  else if (isCompose) toolsButton = { icon: <ClipboardPaste size={16} />, label: 'Import' };
   else if (isAnalyze) toolsButton = { icon: <Microscope size={16} />, label: 'Engine' };
 
   const cols = toolsButton ? 'grid-cols-3' : 'grid-cols-2';

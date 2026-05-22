@@ -5,7 +5,6 @@ import { MoveList } from '@/features/playback/MoveList';
 import { IdeaPanel } from '@/features/openings/IdeaPanel';
 import { OpeningsPanel } from '@/features/openings/OpeningsPanel';
 import { PuzzlePanel } from '@/features/puzzles/PuzzlePanel';
-import { ImportPanel } from '@/features/import/ImportPanel';
 import { AnalyzePanel } from '@/features/analysis/AnalyzePanel';
 import { PvpMatchPanel } from '@/features/pvp/PvpMatchPanel';
 
@@ -26,7 +25,6 @@ export function MobileDrawers() {
   const setSheet = useUiStore((s) => s.setMobileSheet);
   const isOpenings = useMatch('/openings/*');
   const isPuzzles = useMatch('/puzzles/*');
-  const isCompose = useMatch('/compose');
   const isAnalyze = useMatch('/analyze');
   const close = () => setSheet(null);
 
@@ -34,11 +32,9 @@ export function MobileDrawers() {
     ? 'Openings'
     : isPuzzles
       ? 'Puzzle'
-      : isCompose
-        ? 'Compose'
-        : isAnalyze
-          ? 'Engine'
-          : 'Tools';
+      : isAnalyze
+        ? 'Engine'
+        : 'Tools';
 
   return (
     <>
@@ -53,7 +49,6 @@ export function MobileDrawers() {
       <BottomSheet open={sheet === 'tools'} onClose={close} title={toolsTitle} heightVh={0.85}>
         {isOpenings && <OpeningsPanel />}
         {isPuzzles && <PuzzlePanel />}
-        {isCompose && <ImportPanel />}
         {isAnalyze && <AnalyzePanel />}
       </BottomSheet>
       <BottomSheet open={sheet === 'match'} onClose={close} title="Match" heightVh={0.7}>

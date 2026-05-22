@@ -1,11 +1,16 @@
 import { useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useUiStore } from '@/core/store/uiStore';
+import { useGameStore } from '@/core/store/gameStore';
+import { usePuzzleStore } from '@/core/store/puzzleStore';
+import { usePvpStore } from '@/core/store/pvpStore';
+import { closeCurrent } from '@/features/pvp/session';
 import { ThemeStyles } from '@/features/themes/ThemeStyles';
 import { TopBar } from './TopBar';
 import { Sidebar } from './NavSidebar';
 import { SettingsSlideOver } from './SettingsSlideOver';
-import { ExportModal } from './ExportModal';
+import { ShareModal } from './ShareModal';
+import { ImportModal } from './ImportModal';
 import { useHashLoader } from './HashLoader';
 
 /**
@@ -22,8 +27,10 @@ export function AppShell() {
   useHashLoader();
   const settingsOpen = useUiStore((s) => s.settingsOpen);
   const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
-  const exportOpen = useUiStore((s) => s.exportOpen);
-  const setExportOpen = useUiStore((s) => s.setExportOpen);
+  const shareOpen = useUiStore((s) => s.shareOpen);
+  const setShareOpen = useUiStore((s) => s.setShareOpen);
+  const importOpen = useUiStore((s) => s.importOpen);
+  const setImportOpen = useUiStore((s) => s.setImportOpen);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -36,6 +43,31 @@ export function AppShell() {
       navigate('/', { replace: true });
     }
   }, [location.pathname, setSettingsOpen, navigate]);
+
+  // Centralized cleanup when the user leaves an exclusive activity (puzzle
+  // or PvP). Each of these owns sticky state (active puzzle, open WebRTC
+  // channel, clocks, names) that other routes shouldn't inherit. Doing it
+  // here once means routes don't each need their own copy-pasted exit
+  // effect, and entering /analyze from a puzzle (the case that prompted
+  // this) leaves no puzzle baggage behind.
+  useEffect(() => {
+    const onPuzzleRoute = location.pathname.startsWith('/puzzles/');
+    const onPlayRoute = location.pathname === '/play';
+
+    if (!onPuzzleRoute && usePuzzleStore.getState().active) {
+      usePuzzleStore.getState().exit();
+      const m = useGameStore.getState().mode;
+      if (m === 'puzzle') useGameStore.getState().endPuzzle();
+    }
+    if (!onPlayRoute) {
+      const pvp = usePvpStore.getState();
+      if (pvp.channelStatus !== 'idle' || pvp.localColor) {
+        closeCurrent();
+        pvp.reset();
+        if (useGameStore.getState().mode === 'pvp') useGameStore.getState().endPvp();
+      }
+    }
+  }, [location.pathname]);
 
   return (
     <div className="min-h-screen lg:h-screen flex flex-col lg:overflow-hidden">
@@ -54,7 +86,8 @@ export function AppShell() {
       </div>
 
       <SettingsSlideOver open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-      <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} />
+      <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} />
+      <ImportModal open={importOpen} onClose={() => setImportOpen(false)} />
     </div>
   );
 }

@@ -48,8 +48,10 @@ interface UiState {
   navOpen: boolean;
   /** Settings slide-over open state (driven by the gear button + /settings route). */
   settingsOpen: boolean;
-  /** Export modal open state (driven by the Export icon in the TopBar). */
-  exportOpen: boolean;
+  /** Share modal open state — covers PGN/FEN/link copy and video export. */
+  shareOpen: boolean;
+  /** Import modal open state — paste PGN/FEN, URL fetch, fresh board. */
+  importOpen: boolean;
   setBoardTheme: (t: BoardThemeId) => void;
   setPieceSet: (p: PieceSetId) => void;
   setRenderMode: (m: RenderMode) => void;
@@ -64,7 +66,8 @@ interface UiState {
   setNavOpen: (v: boolean) => void;
   toggleNav: () => void;
   setSettingsOpen: (v: boolean) => void;
-  setExportOpen: (v: boolean) => void;
+  setShareOpen: (v: boolean) => void;
+  setImportOpen: (v: boolean) => void;
 }
 
 export const useUiStore = create<UiState>()(
@@ -83,7 +86,8 @@ export const useUiStore = create<UiState>()(
       pvpMuted: false,
       navOpen: true,
       settingsOpen: false,
-      exportOpen: false,
+      shareOpen: false,
+      importOpen: false,
       setBoardTheme: (t) => set({ boardTheme: t }),
       setPieceSet: (p) => set({ pieceSet: p }),
       setRenderMode: (m) => set({ renderMode: m }),
@@ -98,7 +102,8 @@ export const useUiStore = create<UiState>()(
       setNavOpen: (v) => set({ navOpen: v }),
       toggleNav: () => set((s) => ({ navOpen: !s.navOpen })),
       setSettingsOpen: (v) => set({ settingsOpen: v }),
-      setExportOpen: (v) => set({ exportOpen: v }),
+      setShareOpen: (v) => set({ shareOpen: v }),
+      setImportOpen: (v) => set({ importOpen: v }),
     }),
     {
       name: 'gambit:ui',

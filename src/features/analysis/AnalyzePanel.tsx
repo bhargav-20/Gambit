@@ -2,7 +2,8 @@ import { useEffect } from 'react';
 import { useUiStore } from '@/core/store/uiStore';
 import { useGameStore } from '@/core/store/gameStore';
 import { useAnalysisStore } from '@/core/store/analysisStore';
-import { Microscope, Eye, EyeOff, Target, Loader2, AlertTriangle } from 'lucide-react';
+import { loadEmpty, STARTPOS } from '@/core/chess/pgn';
+import { Microscope, Eye, EyeOff, Target, Loader2, AlertTriangle, PlusSquare, RotateCcw, Undo2 } from 'lucide-react';
 import clsx from 'clsx';
 
 /**
@@ -28,16 +29,60 @@ export function AnalyzePanel() {
   const busy = useAnalysisStore((s) => s.busy);
   const failed = useAnalysisStore((s) => s.failed);
   const mode = useGameStore((s) => s.mode);
+  const branchPly = useGameStore((s) => s.branchPly);
+  const backToGame = useGameStore((s) => s.backToGame);
+  const undoMove = useGameStore((s) => s.undoMove);
+  const moveCount = useGameStore((s) => s.game.moves.length);
+  const loadGame = useGameStore((s) => s.loadGame);
+  const analyzeGame = useGameStore((s) => s.analyzeGame);
 
   const label = formatLabel(snapshot?.cp ?? null, snapshot?.mate ?? null);
   const depth = snapshot?.depth ?? 0;
   const engineActive = mode === 'analyze' || mode === 'composer';
+  const branched = branchPly !== null;
+  const canUndo = moveCount > 0;
+
+  const newEmptyBoard = () => {
+    // Drop the current game in favor of a clean starting position. Snapshot
+    // is re-created via analyzeGame() so future branches still have a
+    // reference point (the empty board itself becomes the "original").
+    loadGame(loadEmpty(STARTPOS, { title: 'Fresh board', source: 'editor' }));
+    analyzeGame();
+  };
 
   return (
     <div className="flex flex-col gap-4 h-full">
       <div className="flex items-center gap-2">
         <Microscope size={16} className="text-accent" />
         <h2 className="font-display text-lg">Engine</h2>
+      </div>
+
+      {/* Board actions — always visible at the top so the user has the
+          "I want to tinker" affordance right where they look first. */}
+      <div className="flex flex-col gap-1.5">
+        <button className="btn text-xs justify-center gap-1.5" onClick={newEmptyBoard}>
+          <PlusSquare size={12} /> New empty board
+        </button>
+        <div className="grid grid-cols-2 gap-1.5">
+          <button
+            className="btn h-8 text-xs justify-center gap-1.5"
+            onClick={undoMove}
+            disabled={!canUndo}
+            title="Pop the last move"
+          >
+            <Undo2 size={12} /> Undo
+          </button>
+          <button
+            className="btn h-8 text-xs justify-center gap-1.5"
+            onClick={backToGame}
+            disabled={!branched}
+            title={branched
+              ? `Restore the original game and jump to move ${Math.ceil((branchPly ?? 0) / 2)}`
+              : 'No branch yet — make a move to start exploring variations'}
+          >
+            <RotateCcw size={12} /> Back to game
+          </button>
+        </div>
       </div>
 
       {/* Eval + depth at a glance */}

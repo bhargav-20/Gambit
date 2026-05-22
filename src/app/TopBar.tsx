@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useUiStore } from '@/core/store/uiStore';
 import { useGameStore } from '@/core/store/gameStore';
-import { Crown, Menu, Settings, Video } from 'lucide-react';
+import { Crown, Menu, Settings, Share2, Upload } from 'lucide-react';
 import { NAV_ITEMS } from './navItems';
 
 /**
@@ -16,8 +16,9 @@ import { NAV_ITEMS } from './navItems';
 export function TopBar() {
   const toggleNav = useUiStore((s) => s.toggleNav);
   const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
-  const setExportOpen = useUiStore((s) => s.setExportOpen);
-  const hasGame = useGameStore((s) => s.game.moves.length > 0 || s.game.initialFen);
+  const setShareOpen = useUiStore((s) => s.setShareOpen);
+  const setImportOpen = useUiStore((s) => s.setImportOpen);
+  const hasGame = useGameStore((s) => s.game.moves.length > 0 || !!s.game.initialFen);
   const location = useLocation();
   const activity = NAV_ITEMS.find((n) => location.pathname.startsWith(n.path) && n.path !== '/') ?? null;
 
@@ -52,12 +53,20 @@ export function TopBar() {
       <div className="ml-auto flex items-center gap-1">
         <button
           className="btn-icon"
-          onClick={() => setExportOpen(true)}
-          disabled={!hasGame}
-          title="Export"
-          aria-label="Export"
+          onClick={() => setImportOpen(true)}
+          title="Import a game"
+          aria-label="Import"
         >
-          <Video size={16} />
+          <Upload size={16} />
+        </button>
+        <button
+          className="btn-icon"
+          onClick={() => setShareOpen(true)}
+          disabled={!hasGame}
+          title="Share or export"
+          aria-label="Share"
+        >
+          <Share2 size={16} />
         </button>
         <button
           className="btn-icon"

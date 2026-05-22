@@ -219,19 +219,26 @@ export const useGameStore = create<GameState>()(
 
   composeFromHere: () => {
     const state = get();
-    if (state.mode === 'composer') return;
-    // The user explicitly says "exit the opening, let me play from here."
-    // Build a brand-new game whose history is just the moves played so far
-    // in the opening — no opening title, no future moves carried over.
-    // Once we're in composer, the game is fully owned by the user.
+    // "Branch from here": truncate the current line at the user's ply,
+    // make the truncated line the new game, and drop into analyze. The
+    // snapshot is the truncated line itself so Back-to-game returns the
+    // user to ply N (their branch-out point) any time they wander.
+    //
+    // (The old "composer" mode is gone — analyze covers free play, since
+    // both are "engine on, edit on, branching." This action keeps the
+    // name `composeFromHere` for back-compat with existing callers, but
+    // the surface is renamed "Branch from here" in the UI.)
     const sourceTitle = state.game.meta.title;
-    const composition: LoadedGame = {
+    const truncated: LoadedGame = {
       meta: {
         id: Math.random().toString(36).slice(2, 10),
-        title: 'Composition',
+        title:
+          sourceTitle && sourceTitle !== 'Composition' && sourceTitle !== 'New game'
+            ? `${sourceTitle} — variation`
+            : 'Variation',
         description:
           sourceTitle && sourceTitle !== 'Composition' && sourceTitle !== 'New game'
-            ? `Started from ${sourceTitle} (move ${Math.max(1, Math.ceil(state.ply / 2))})`
+            ? `Branched from ${sourceTitle} at move ${Math.max(1, Math.ceil(state.ply / 2))}`
             : undefined,
         source: 'editor',
       },
@@ -240,9 +247,10 @@ export const useGameStore = create<GameState>()(
       rawPgn: '',
     };
     set({
-      mode: 'composer',
-      game: composition,
-      // ply unchanged — user is at the end of the composition's history.
+      mode: 'analyze',
+      game: truncated,
+      analyzeSnapshot: truncated,
+      branchPly: null,
       editMode: true,
       playing: false,
     });

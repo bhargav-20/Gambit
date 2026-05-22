@@ -8,7 +8,6 @@ import { OpeningDetailRoute } from './routes/OpeningDetailRoute';
 import { PuzzlesRoute } from './routes/PuzzlesRoute';
 import { PuzzleDetailRoute } from './routes/PuzzleDetailRoute';
 import { PlayRoute } from './routes/PlayRoute';
-import { ComposeRoute } from './routes/ComposeRoute';
 import { AnalyzeRoute } from './routes/AnalyzeRoute';
 import { GamesRoute } from './routes/GamesRoute';
 import { NotFound } from './routes/NotFound';
@@ -35,7 +34,9 @@ export default function App() {
         <Route path="puzzles" element={<PuzzlesRoute />} />
         <Route path="puzzles/:puzzleId" element={<PuzzleDetailRoute />} />
         <Route path="play" element={<PlayRoute />} />
-        <Route path="compose" element={<ComposeRoute />} />
+        {/* /compose retired — its import features live in the TopBar Import
+            modal, and free-play is now inside /analyze. The path stays in
+            this comment so a future re-add doesn't trip on the gap. */}
         <Route path="analyze" element={<AnalyzeRoute />} />
         <Route path="games" element={<GamesRoute />} />
         <Route path="*" element={<NotFound />} />
