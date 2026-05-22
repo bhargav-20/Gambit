@@ -5,6 +5,7 @@ import { useGameStore } from '@/core/store/gameStore';
 import { usePuzzleStore } from '@/core/store/puzzleStore';
 import { usePvpStore } from '@/core/store/pvpStore';
 import { closeCurrent } from '@/features/pvp/session';
+import { loadEmpty, STARTPOS } from '@/core/chess/pgn';
 import { ThemeStyles } from '@/features/themes/ThemeStyles';
 import { TopBar } from './TopBar';
 import { Sidebar } from './NavSidebar';
@@ -58,6 +59,13 @@ export function AppShell() {
       usePuzzleStore.getState().exit();
       const m = useGameStore.getState().mode;
       if (m === 'puzzle') useGameStore.getState().endPuzzle();
+      // The puzzle's loaded "game" is scratch context — the FEN seeded
+      // for that tactic, not a real game worth carrying forward. Reset to
+      // a fresh starting position so the next route (Analyze in
+      // particular) doesn't inherit the puzzle position as its base.
+      useGameStore
+        .getState()
+        .loadGame(loadEmpty(STARTPOS, { title: 'New game', source: 'editor' }));
     }
     if (!onPlayRoute) {
       const pvp = usePvpStore.getState();
