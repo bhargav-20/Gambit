@@ -104,9 +104,15 @@ export function Board2D({ maxSize }: Props) {
             }
 
             // Puzzle mode: validate the move against the expected solution
-            // before letting it touch the main game state.
+            // before letting it touch the main game state.  Only active when
+            // the user is actually solving — once the puzzle is solved or
+            // they've revealed the answer, the board reverts to free-edit
+            // behavior so they can fiddle with the resulting position.
             const puzzle = usePuzzleStore.getState();
-            if (puzzle.active && puzzle.status !== 'solved') {
+            const puzzleActiveAndUnfinished =
+              puzzle.active &&
+              (puzzle.status === 'in_progress' || puzzle.status === 'wrong');
+            if (puzzleActiveAndUnfinished) {
               const probe = new Chess(beforeFen);
               const moveResult = probe.move({ from, to, promotion: 'q' });
               if (!moveResult) {
@@ -117,6 +123,10 @@ export function Board2D({ maxSize }: Props) {
               if (verdict === 'wrong') {
                 puzzle.markWrong(moveResult.san);
                 apiRef.current?.set({ fen: beforeFen });
+                // Auto-clear the "Not quite" banner after a beat so the
+                // user can try another move without first clicking "Try
+                // again". The position is already reset visually.
+                window.setTimeout(() => usePuzzleStore.getState().clearWrong(), 1400);
                 return;
               }
               // Correct — apply, then auto-play the opponent's scripted reply.

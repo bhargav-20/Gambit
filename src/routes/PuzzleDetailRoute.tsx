@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { useGameStore } from '@/core/store/gameStore';
 import { usePuzzleStore } from '@/core/store/puzzleStore';
-import { PUZZLES } from '@/features/puzzles/catalog';
+import { PUZZLES, puzzleSideToMove } from '@/features/puzzles/catalog';
 import { loadEmpty } from '@/core/chess/pgn';
 import { PuzzlePanel } from '@/features/puzzles/PuzzlePanel';
 import { ActivityLayout } from '@/app/ActivityLayout';
@@ -29,6 +29,14 @@ export function PuzzleDetailRoute() {
     loadGame(game);
     startPuzzle();
     start(puzzle);
+    // Orient the board so the player is always at the bottom, like every
+    // chess platform does. Pulling this into the route (instead of into
+    // start()) keeps the puzzle store store-pure and lets visualizer mode
+    // keep its own orientation untouched.
+    const side = puzzleSideToMove(puzzle);
+    if (useGameStore.getState().orientation !== side) {
+      useGameStore.setState({ orientation: side });
+    }
   }, [puzzle, loadGame, startPuzzle, start]);
 
   if (!puzzleId) return <Navigate to="/puzzles" replace />;

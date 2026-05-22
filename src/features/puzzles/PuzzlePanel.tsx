@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PUZZLES } from './catalog';
+import { Chess } from 'chess.js';
+import { PUZZLES, puzzleSideToMove } from './catalog';
 import type { Puzzle } from './catalog';
 import { usePuzzleStore } from '@/core/store/puzzleStore';
 import { useGameStore } from '@/core/store/gameStore';
 import { useUiStore } from '@/core/store/uiStore';
 import { loadEmpty } from '@/core/chess/pgn';
-import { Puzzle as PuzzleIcon, Trophy, X, Check, RotateCcw, Lightbulb, ChevronRight } from 'lucide-react';
+import type { Square } from '@/core/chess/types';
+import { Puzzle as PuzzleIcon, Trophy, X, Check, RotateCcw, Lightbulb, ChevronRight, Eye } from 'lucide-react';
 import clsx from 'clsx';
 
 /**
@@ -63,6 +65,7 @@ function PuzzleList() {
       <div className="flex-1 overflow-y-auto pr-1 -mr-1 flex flex-col gap-1.5">
         {filtered.map((p) => {
           const solved = solvedIds.includes(p.id);
+          const side = puzzleSideToMove(p);
           return (
             <button
               key={p.id}
@@ -81,7 +84,10 @@ function PuzzleList() {
                 </span>
                 <DifficultyBadge level={p.difficulty} />
               </div>
-              <p className="text-xs text-ink-muted mt-0.5">{p.theme}</p>
+              <p className="text-xs text-ink-muted mt-0.5 flex items-center gap-2">
+                <SideChip side={side} />
+                <span>{p.theme}</span>
+              </p>
             </button>
           );
         })}
@@ -93,13 +99,23 @@ function PuzzleList() {
 function ActivePuzzle() {
   const active = usePuzzleStore((s) => s.active);
   const status = usePuzzleStore((s) => s.status);
+  const expectedIndex = usePuzzleStore((s) => s.expectedIndex);
   const start = usePuzzleStore((s) => s.start);
+  const markRevealed = usePuzzleStore((s) => s.markRevealed);
   const loadGame = useGameStore((s) => s.loadGame);
   const startPuzzleMode = useGameStore((s) => s.startPuzzle);
+  const applyMove = useGameStore((s) => s.applyMove);
   const navigate = useNavigate();
   const [showHint, setShowHint] = useState(false);
 
   if (!active) return null;
+
+  const side = puzzleSideToMove(active);
+  // Solutions alternate user, opp, user, opp, ... — so the number of user
+  // moves is ceil(length/2). expectedIndex counts whole-solution positions,
+  // so user-move-number = expectedIndex/2 + 1.
+  const totalUserMoves = Math.ceil(active.solution.length / 2);
+  const currentUserMove = Math.min(totalUserMoves, Math.floor(expectedIndex / 2) + 1);
 
   const reset = () => {
     const game = loadEmpty(active.fen, { title: active.title, source: 'editor' });
@@ -107,6 +123,29 @@ function ActivePuzzle() {
     startPuzzleMode();
     start(active);
     setShowHint(false);
+  };
+
+  const reveal = () => {
+    // Replay from scratch so the user sees the full solution play out, even
+    // if they made wrong moves first.
+    const game = loadEmpty(active.fen, { title: active.title, source: 'editor' });
+    loadGame(game);
+    startPuzzleMode();
+    markRevealed();
+
+    // Step through every move with a delay so the user can follow along.
+    // We convert each SAN to from/to via chess.js, then call applyMove —
+    // same pipeline the user's moves go through, just driven by code.
+    let cursor = active.fen;
+    active.solution.forEach((san, i) => {
+      setTimeout(() => {
+        const probe = new Chess(cursor);
+        const r = probe.move(san);
+        if (!r) return;
+        cursor = probe.fen();
+        applyMove(r.from as Square, r.to as Square, r.promotion as 'q' | 'r' | 'b' | 'n' | undefined);
+      }, 600 * (i + 1));
+    });
   };
 
   return (
@@ -126,11 +165,39 @@ function ActivePuzzle() {
         </div>
       </div>
 
+      {/* The "who's to move" banner is the single most important fix here —
+          without it, the user is left squinting at the FEN to figure out
+          which side they're solving for. */}
+      <div
+        className={clsx(
+          'panel-tight px-3 py-2 flex items-center gap-2.5',
+          status === 'in_progress' && 'border-accent/40',
+        )}
+      >
+        <span
+          className={clsx(
+            'w-3 h-3 rounded-full border shrink-0',
+            side === 'white' ? 'bg-white border-white/30' : 'bg-black border-white/40',
+          )}
+        />
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium text-ink">
+            {side === 'white' ? 'White' : 'Black'} to move
+          </div>
+          {totalUserMoves > 1 && status === 'in_progress' && (
+            <div className="text-[10px] uppercase tracking-wider text-ink-muted">
+              Move {currentUserMove} of {totalUserMoves}
+            </div>
+          )}
+        </div>
+      </div>
+
       <div
         className={clsx(
           'panel-tight p-3 text-sm',
           status === 'solved' && 'border-good/50 bg-good/5',
           status === 'wrong' && 'border-bad/50 bg-bad/5',
+          status === 'revealed' && 'border-warn/50 bg-warn/5',
         )}
       >
         {status === 'in_progress' && (
@@ -144,7 +211,7 @@ function ActivePuzzle() {
             <X size={14} className="text-bad shrink-0 mt-0.5" />
             <div>
               <p className="font-medium text-bad">Not quite</p>
-              <p className="text-xs text-ink-muted mt-0.5">Try a different move, or use the hint below.</p>
+              <p className="text-xs text-ink-muted mt-0.5">Try another move — the position is back where it was.</p>
             </div>
           </div>
         )}
@@ -159,16 +226,34 @@ function ActivePuzzle() {
             </div>
           </div>
         )}
+        {status === 'revealed' && (
+          <div className="flex items-start gap-2">
+            <Eye size={14} className="text-warn shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium text-warn">Solution shown</p>
+              <p className="text-xs text-ink-muted mt-0.5 font-mono">
+                {active.solution.join(' ')}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
-      {active.hint && (
+      {/* Hint sits above the in-progress action buttons */}
+      {active.hint && status === 'in_progress' && (
         <button
           className="btn text-xs"
           onClick={() => setShowHint(true)}
-          disabled={showHint || status === 'solved'}
+          disabled={showHint}
         >
           <Lightbulb size={12} />
           {showHint ? active.hint : 'Show hint'}
+        </button>
+      )}
+
+      {status === 'in_progress' && (
+        <button className="btn text-xs" onClick={reveal}>
+          <Eye size={12} /> Show solution
         </button>
       )}
 
@@ -211,4 +296,18 @@ function DifficultyBadge({ level }: { level: 1 | 2 | 3 }) {
   const dots = '●'.repeat(level) + '○'.repeat(3 - level);
   const color = level === 1 ? 'text-good' : level === 2 ? 'text-accent' : 'text-bad';
   return <span className={clsx('font-mono text-[10px]', color)}>{dots}</span>;
+}
+
+function SideChip({ side }: { side: 'white' | 'black' }) {
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] text-ink-faint">
+      <span
+        className={clsx(
+          'w-2 h-2 rounded-full border',
+          side === 'white' ? 'bg-white border-white/30' : 'bg-black border-white/40',
+        )}
+      />
+      {side === 'white' ? 'White' : 'Black'}
+    </span>
+  );
 }
