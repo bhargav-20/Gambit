@@ -26,7 +26,7 @@ export function TopBar() {
   const activity = NAV_ITEMS.find((n) => location.pathname.startsWith(n.path) && n.path !== '/') ?? null;
 
   return (
-    <header className="shrink-0 h-14 border-b border-edge bg-bg-panel backdrop-blur-xl flex items-center px-2 sm:px-4 gap-2">
+    <header className="shrink-0 h-14 border-b border-edge bg-bg-panel backdrop-blur-xl flex items-center px-2 sm:px-4 gap-2 sticky top-0 z-30">
       <button
         className="btn-icon"
         onClick={toggleNav}
