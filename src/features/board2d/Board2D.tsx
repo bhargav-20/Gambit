@@ -50,7 +50,7 @@ export function Board2D({ maxSize }: Props) {
   const showCoords = useUiStore((s) => s.showCoords);
   const showLastMove = useUiStore((s) => s.showLastMove);
   const showLegalDots = useUiStore((s) => s.showLegalDots);
-  const showBestMove = useUiStore((s) => s.showBestMove);
+  const bestMoveDisplay = useUiStore((s) => s.bestMoveDisplay);
   const animationMs = useUiStore((s) => s.animationMs);
   const mode = useGameStore((s) => s.mode);
   const bestMove = useAnalysisStore((s) => s.snapshot?.bestMove ?? null);
@@ -221,7 +221,11 @@ export function Board2D({ maxSize }: Props) {
   useEffect(() => {
     const api = apiRef.current;
     if (!api) return;
-    if ((mode !== 'composer' && mode !== 'analyze') || !showBestMove || !bestMove) {
+    const showArrow =
+      (mode === 'composer' || mode === 'analyze') &&
+      bestMoveDisplay !== 'off' &&
+      !!bestMove;
+    if (!showArrow) {
       api.setAutoShapes([]);
       return;
     }
@@ -231,7 +235,7 @@ export function Board2D({ maxSize }: Props) {
     // refine via CSS in chessgroundBase.css so the arrow body and head are
     // chunkier than the default.
     api.setAutoShapes([{ orig: from, dest: to, brush: 'blue' }]);
-  }, [mode, showBestMove, bestMove]);
+  }, [mode, bestMoveDisplay, bestMove]);
 
   // Reserve space on the right (ranks) and bottom (files) for coord labels so
   // they sit OUTSIDE the board rather than overlapping pieces. When coords are

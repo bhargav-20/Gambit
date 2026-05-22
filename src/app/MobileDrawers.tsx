@@ -5,23 +5,40 @@ import { MoveList } from '@/features/playback/MoveList';
 import { IdeaPanel } from '@/features/openings/IdeaPanel';
 import { OpeningsPanel } from '@/features/openings/OpeningsPanel';
 import { PuzzlePanel } from '@/features/puzzles/PuzzlePanel';
+import { ImportPanel } from '@/features/import/ImportPanel';
+import { AnalyzePanel } from '@/features/analysis/AnalyzePanel';
 import { PvpMatchPanel } from '@/features/pvp/PvpMatchPanel';
 
 /**
- * Mobile bottom-sheets, one per kind of overlayable content. Only one is
- * open at a time, controlled by `uiStore.mobileSheet`. Sheets render the
- * same component the desktop sidebar/right-column would — there's no
- * mobile-only chrome here.
+ * Mobile bottom-sheets — one per kind of overlayable surface. Only one is
+ * open at a time, controlled by `uiStore.mobileSheet`.
  *
- * The `catalog` sheet swaps between OpeningsPanel and PuzzlePanel based on
- * the current route. That matches the desktop Browse tab's behavior.
+ *   moves  — global move list
+ *   idea   — opening idea (when one is loaded)
+ *   tools  — route-aware. Hosts whatever the desktop right-column shows
+ *            for the current route. This is the mobile equivalent of the
+ *            new dedicated route panel — same content, different chrome.
+ *   match  — kept as a separate slot since PvP is dense enough to deserve
+ *            its own dedicated drawer (resign/draw/end-card).
  */
 export function MobileDrawers() {
   const sheet = useUiStore((s) => s.mobileSheet);
   const setSheet = useUiStore((s) => s.setMobileSheet);
   const isOpenings = useMatch('/openings/*');
   const isPuzzles = useMatch('/puzzles/*');
+  const isCompose = useMatch('/compose');
+  const isAnalyze = useMatch('/analyze');
   const close = () => setSheet(null);
+
+  const toolsTitle = isOpenings
+    ? 'Openings'
+    : isPuzzles
+      ? 'Puzzle'
+      : isCompose
+        ? 'Compose'
+        : isAnalyze
+          ? 'Engine'
+          : 'Tools';
 
   return (
     <>
@@ -33,9 +50,11 @@ export function MobileDrawers() {
       <BottomSheet open={sheet === 'idea'} onClose={close} title="Opening Idea" heightVh={0.85}>
         <IdeaPanel />
       </BottomSheet>
-      <BottomSheet open={sheet === 'catalog'} onClose={close} title={isOpenings ? 'Openings' : isPuzzles ? 'Puzzles' : 'Catalog'} heightVh={0.85}>
+      <BottomSheet open={sheet === 'tools'} onClose={close} title={toolsTitle} heightVh={0.85}>
         {isOpenings && <OpeningsPanel />}
         {isPuzzles && <PuzzlePanel />}
+        {isCompose && <ImportPanel />}
+        {isAnalyze && <AnalyzePanel />}
       </BottomSheet>
       <BottomSheet open={sheet === 'match'} onClose={close} title="Match" heightVh={0.7}>
         <PvpMatchPanel />

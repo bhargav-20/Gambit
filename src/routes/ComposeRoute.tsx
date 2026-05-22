@@ -19,5 +19,5 @@ export function ComposeRoute() {
     }
   }, []);
 
-  return <ActivityLayout rightColumn={<ImportPanel />} />;
+  return <ActivityLayout rightPanel={<ImportPanel />} />;
 }

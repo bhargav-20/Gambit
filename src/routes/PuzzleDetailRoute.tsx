@@ -42,5 +42,5 @@ export function PuzzleDetailRoute() {
   if (!puzzleId) return <Navigate to="/puzzles" replace />;
   if (!puzzle) return <Navigate to="/puzzles" replace />;
 
-  return <ActivityLayout rightColumn={<PuzzlePanel />} hidePlayback />;
+  return <ActivityLayout rightPanel={<PuzzlePanel />} hidePlayback />;
 }

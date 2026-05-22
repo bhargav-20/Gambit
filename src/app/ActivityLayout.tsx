@@ -13,26 +13,31 @@ import { MobileActions } from './MobileActions';
 import { MobileDrawers } from './MobileDrawers';
 
 interface Props {
-  /** Replaces the right column's default GamePanel. Use when a route owns its
-   *  own right-column content (e.g. Play uses PvpMatchPanel, an active puzzle
-   *  uses ActivePuzzle). When omitted, GamePanel renders with Moves/Idea/Browse
-   *  tabs. */
-  rightColumn?: React.ReactNode;
-  /** Hide the visualizer's playback controls + MoveNote (PvP uses its own
-   *  match controls instead). */
+  /** Optional dedicated right column on desktop (lg+). Hosts the route's
+   *  primary surface: catalog for openings/puzzles, import for compose,
+   *  engine controls for analyze, match controls for pvp. On mobile this
+   *  content surfaces via a bottom-sheet — see MobileDrawers + MobileActions. */
+  rightPanel?: React.ReactNode;
+  /** Hide playback controls + MoveNote for live modes (PvP) that don't use them. */
   hidePlayback?: boolean;
 }
 
 /**
- * The board-centered layout shared by every "doing chess" route. Centralizes
- * the board placement, eval bar overlay, player strips (PvP only), playback
- * controls, and the right-side panel column so each route doesn't reinvent
- * it.
+ * The board-centered layout shared by every "doing chess" route.
  *
- * Routes pass route-specific content via `rightColumn`; everything else
- * (board, evals, mobile drawers) renders identically across activities.
+ * Desktop (lg+) is a 3-section main area:
+ *
+ *   1. Board column           — fluid; board + player strips (PvP) +
+ *                               eval bar overlay.
+ *   2. Info column (~320 px)  — playback controls, analysis status,
+ *                               move-note, Moves/Idea tabs.
+ *   3. Route panel (~340 px)  — passed in by the route. Hidden when
+ *                               the route doesn't provide one.
+ *
+ * Mobile collapses all three into a single scrollable column with the
+ * route panel reachable via a bottom-sheet button (MobileActions).
  */
-export function ActivityLayout({ rightColumn, hidePlayback }: Props) {
+export function ActivityLayout({ rightPanel, hidePlayback }: Props) {
   const renderMode = useUiStore((s) => s.renderMode);
   const mode = useGameStore((s) => s.mode);
   const pvpLocalColor = usePvpStore((s) => s.localColor);
@@ -57,7 +62,7 @@ export function ActivityLayout({ rightColumn, hidePlayback }: Props) {
           </div>
         </div>
 
-        {/* Right column */}
+        {/* Info column — playback, engine status, move list, idea */}
         <div className="lg:w-80 lg:min-h-0 flex flex-col gap-3">
           {!hidePlayback && (
             <>
@@ -68,9 +73,20 @@ export function ActivityLayout({ rightColumn, hidePlayback }: Props) {
           )}
           <MobileActions />
           <div className="hidden lg:flex flex-col flex-1 min-h-0">
-            {rightColumn ?? <GamePanel />}
+            <GamePanel />
           </div>
         </div>
+
+        {/* Route panel — dedicated 3rd column on desktop, hidden on
+            mobile (lives in a bottom-sheet there). Only renders when the
+            route actually has content for it. */}
+        {rightPanel && (
+          <aside className="hidden lg:flex lg:w-[340px] xl:w-[380px] shrink-0 lg:min-h-0 flex-col">
+            <div className="panel flex-1 min-h-0 flex flex-col p-4">
+              {rightPanel}
+            </div>
+          </aside>
+        )}
       </div>
       <MobileDrawers />
     </div>

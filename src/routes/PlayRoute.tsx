@@ -43,5 +43,5 @@ export function PlayRoute() {
     );
   }
 
-  return <ActivityLayout rightColumn={<PvpMatchPanel />} hidePlayback />;
+  return <ActivityLayout rightPanel={<PvpMatchPanel />} hidePlayback />;
 }

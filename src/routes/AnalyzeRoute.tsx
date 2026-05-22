@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useGameStore } from '@/core/store/gameStore';
 import { ActivityLayout } from '@/app/ActivityLayout';
+import { AnalyzePanel } from '@/features/analysis/AnalyzePanel';
 
 /**
  * `/analyze` — flips the currently-loaded game into analyze mode (snapshots
@@ -19,5 +20,5 @@ export function AnalyzeRoute() {
     if (m !== 'analyze') analyzeGame();
   }, [analyzeGame]);
 
-  return <ActivityLayout />;
+  return <ActivityLayout rightPanel={<AnalyzePanel />} />;
 }

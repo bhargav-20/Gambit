@@ -1,10 +1,8 @@
 import { useGameStore } from '@/core/store/gameStore';
-import { useUiStore } from '@/core/store/uiStore';
 import { useAnalysisStore } from '@/core/store/analysisStore';
 import {
-  Pencil, X, Eye, EyeOff, Loader2, Undo2, Microscope, RotateCcw,
+  Pencil, X, Loader2, Undo2, Microscope, RotateCcw,
 } from 'lucide-react';
-import clsx from 'clsx';
 
 /**
  * Strip that sits below the playback controls. Renders different content
@@ -14,19 +12,19 @@ import clsx from 'clsx';
  *               branching + back-to-game) and "Compose from here" (free
  *               play that becomes the user's composition).
  *
- *   composer:   panel with eval, Undo, Show best move toggle, X (exit).
+ *   composer:   compact panel with eval + Undo + exit. Best-move toggle
+ *               lives in the dedicated AnalyzePanel (right column).
  *
- *   analyze:    panel with eval, Undo, Show best move toggle, "Back to game"
- *               (restores the snapshot at the branch ply), X (exit).
+ *   analyze:    same as composer plus "Back to game" when branched.
  *
- *   puzzle:     nothing — the puzzle owns the right column.
+ *   puzzle/pvp: nothing — those modes own their own UI.
  */
 export function ComposerBar() {
   const mode = useGameStore((s) => s.mode);
 
-  if (mode === 'puzzle') return null;
+  if (mode === 'puzzle' || mode === 'pvp') return null;
   if (mode === 'composer') return <ComposerPanel />;
-  if (mode === 'analyze') return <AnalyzePanel />;
+  if (mode === 'analyze') return <AnalyzePanelBar />;
   return <VisualizerActions />;
 }
 
@@ -66,8 +64,6 @@ function ComposerPanel() {
   const undoMove = useGameStore((s) => s.undoMove);
   const moveCount = useGameStore((s) => s.game.moves.length);
   const canUndo = moveCount > 0;
-  const showBestMove = useUiStore((s) => s.showBestMove);
-  const setShowBestMove = useUiStore((s) => s.setShowBestMove);
   const snapshot = useAnalysisStore((s) => s.snapshot);
   const busy = useAnalysisStore((s) => s.busy);
   const failed = useAnalysisStore((s) => s.failed);
@@ -89,7 +85,7 @@ function ComposerPanel() {
         </div>
         <button
           className="btn-icon shrink-0"
-          onClick={() => { setShowBestMove(false); exitComposer(); }}
+          onClick={() => exitComposer()}
           title="Exit composer"
         >
           <X size={14} />
@@ -98,17 +94,14 @@ function ComposerPanel() {
 
       <EngineStatus label={label} depth={depth} busy={busy} failed={failed} done={!!snapshot?.done} />
 
-      <div className="grid grid-cols-2 gap-2">
-        <button onClick={undoMove} className="btn h-8 text-xs justify-center gap-1.5" disabled={!canUndo}>
-          <Undo2 size={12} /> Undo
-        </button>
-        <BestMoveToggle showBestMove={showBestMove} setShowBestMove={setShowBestMove} disabled={!snapshot?.bestMove} />
-      </div>
+      <button onClick={undoMove} className="btn h-8 text-xs justify-center gap-1.5" disabled={!canUndo}>
+        <Undo2 size={12} /> Undo
+      </button>
     </div>
   );
 }
 
-function AnalyzePanel() {
+function AnalyzePanelBar() {
   const exitAnalyze = useGameStore((s) => s.exitAnalyze);
   const backToGame = useGameStore((s) => s.backToGame);
   const undoMove = useGameStore((s) => s.undoMove);
@@ -116,8 +109,6 @@ function AnalyzePanel() {
   const moveCount = useGameStore((s) => s.game.moves.length);
   const canUndo = moveCount > 0;
   const branched = branchPly !== null;
-  const showBestMove = useUiStore((s) => s.showBestMove);
-  const setShowBestMove = useUiStore((s) => s.setShowBestMove);
   const snapshot = useAnalysisStore((s) => s.snapshot);
   const busy = useAnalysisStore((s) => s.busy);
   const failed = useAnalysisStore((s) => s.failed);
@@ -141,7 +132,7 @@ function AnalyzePanel() {
         </div>
         <button
           className="btn-icon shrink-0"
-          onClick={() => { setShowBestMove(false); exitAnalyze(); }}
+          onClick={() => exitAnalyze()}
           title="Exit analyze mode"
         >
           <X size={14} />
@@ -154,17 +145,15 @@ function AnalyzePanel() {
         <button onClick={undoMove} className="btn h-8 text-xs justify-center gap-1.5" disabled={!canUndo}>
           <Undo2 size={12} /> Undo
         </button>
-        <BestMoveToggle showBestMove={showBestMove} setShowBestMove={setShowBestMove} disabled={!snapshot?.bestMove} />
+        <button
+          onClick={backToGame}
+          className="btn h-8 text-xs justify-center gap-1.5"
+          disabled={!branched}
+          title={branched ? 'Restore the original game and jump to the branch point' : 'No branch yet'}
+        >
+          <RotateCcw size={12} /> Back to game
+        </button>
       </div>
-
-      <button
-        onClick={backToGame}
-        className="btn h-8 text-xs justify-center gap-1.5"
-        disabled={!branched}
-        title={branched ? 'Restore the original game and jump to the branch point' : 'No branch yet'}
-      >
-        <RotateCcw size={12} /> Back to game
-      </button>
     </div>
   );
 }
@@ -187,26 +176,6 @@ function EngineStatus({
   );
 }
 
-function BestMoveToggle({
-  showBestMove, setShowBestMove, disabled,
-}: {
-  showBestMove: boolean; setShowBestMove: (v: boolean) => void; disabled: boolean;
-}) {
-  return (
-    <button
-      onClick={() => setShowBestMove(!showBestMove)}
-      className={clsx(
-        'btn h-8 text-xs justify-center gap-1.5',
-        showBestMove && 'border-accent text-accent bg-accent/10',
-      )}
-      disabled={disabled}
-    >
-      {showBestMove ? <EyeOff size={12} /> : <Eye size={12} />}
-      {showBestMove ? 'Hide best' : 'Best move'}
-    </button>
-  );
-}
-
 function formatLabel(cp: number | null, mate: number | null): string {
   if (mate !== null) {
     const sign = mate > 0 ? '' : '-';
@@ -217,3 +186,4 @@ function formatLabel(cp: number | null, mate: number | null): string {
   const sign = pawns >= 0 ? '+' : '';
   return `${sign}${pawns.toFixed(1)}`;
 }
+

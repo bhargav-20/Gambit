@@ -18,8 +18,9 @@ export type RenderMode = '2d' | '3d';
 
 export type PanelView = 'openings' | 'import' | 'export' | 'settings' | 'puzzles' | 'pvp';
 /** Which bottom-sheet is open on mobile; null = closed.
- *  `catalog` swaps content based on the current route (openings vs puzzles). */
-export type MobileSheet = 'moves' | 'idea' | 'catalog' | 'match' | null;
+ *  `tools` is route-aware — same slot, content swaps based on the URL
+ *  (openings catalog / puzzle UI / import / engine controls). */
+export type MobileSheet = 'moves' | 'idea' | 'tools' | 'match' | null;
 
 interface UiState {
   boardTheme: BoardThemeId;
@@ -28,8 +29,15 @@ interface UiState {
   showCoords: boolean;
   showLastMove: boolean;
   showLegalDots: boolean;
-  /** Show the engine's best-move arrow on the board (only in Analysis mode). */
-  showBestMove: boolean;
+  /**
+   * How the engine's best-move arrow is surfaced on the board (analyze/compose only):
+   *   off   — never shown
+   *   on    — always shown while the engine has a result
+   *   once  — shown for the current position only; auto-resets to 'off' on
+   *           the next ply change. Use this when you want a peek without
+   *           committing to permanent visualization.
+   */
+  bestMoveDisplay: 'off' | 'on' | 'once';
   animationMs: number;
   activePanel: PanelView;
   mobileSheet: MobileSheet;
@@ -48,7 +56,7 @@ interface UiState {
   setShowCoords: (v: boolean) => void;
   setShowLastMove: (v: boolean) => void;
   setShowLegalDots: (v: boolean) => void;
-  setShowBestMove: (v: boolean) => void;
+  setBestMoveDisplay: (v: 'off' | 'on' | 'once') => void;
   setAnimationMs: (ms: number) => void;
   setActivePanel: (p: PanelView) => void;
   setMobileSheet: (s: MobileSheet) => void;
@@ -68,7 +76,7 @@ export const useUiStore = create<UiState>()(
       showCoords: true,
       showLastMove: true,
       showLegalDots: true,
-      showBestMove: false,                  // off by default — user opts in per-position
+      bestMoveDisplay: 'off',               // off by default — user opts in per-position
       animationMs: 220,
       activePanel: 'openings',
       mobileSheet: null,
@@ -82,7 +90,7 @@ export const useUiStore = create<UiState>()(
       setShowCoords: (v) => set({ showCoords: v }),
       setShowLastMove: (v) => set({ showLastMove: v }),
       setShowLegalDots: (v) => set({ showLegalDots: v }),
-      setShowBestMove: (v) => set({ showBestMove: v }),
+      setBestMoveDisplay: (v) => set({ bestMoveDisplay: v }),
       setAnimationMs: (ms) => set({ animationMs: ms }),
       setActivePanel: (p) => set({ activePanel: p }),
       setMobileSheet: (s) => set({ mobileSheet: s }),
@@ -103,7 +111,7 @@ export const useUiStore = create<UiState>()(
         showCoords: s.showCoords,
         showLastMove: s.showLastMove,
         showLegalDots: s.showLegalDots,
-        // showBestMove intentionally NOT persisted — it's a per-session affordance.
+        // bestMoveDisplay intentionally NOT persisted — it's a per-session affordance.
         animationMs: s.animationMs,
         activePanel: s.activePanel,
         pvpMuted: s.pvpMuted,

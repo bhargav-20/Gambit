@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { useGameStore } from '@/core/store/gameStore';
 import { OPENINGS } from '@/features/openings/catalog';
+import { OpeningsPanel } from '@/features/openings/OpeningsPanel';
 import { ActivityLayout } from '@/app/ActivityLayout';
 
 /**
@@ -42,5 +43,5 @@ export function OpeningDetailRoute() {
   if (!openingId) return <Navigate to="/openings" replace />;
   if (!opening) return <Navigate to="/openings" replace />;
 
-  return <ActivityLayout />;
+  return <ActivityLayout rightPanel={<OpeningsPanel />} />;
 }
