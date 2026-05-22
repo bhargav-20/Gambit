@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PUZZLES } from './catalog';
 import type { Puzzle } from './catalog';
 import { usePuzzleStore } from '@/core/store/puzzleStore';
 import { useGameStore } from '@/core/store/gameStore';
+import { useUiStore } from '@/core/store/uiStore';
 import { loadEmpty } from '@/core/chess/pgn';
 import { Puzzle as PuzzleIcon, Trophy, X, Check, RotateCcw, Lightbulb, ChevronRight } from 'lucide-react';
 import clsx from 'clsx';
@@ -19,22 +21,22 @@ export function PuzzlePanel() {
 }
 
 function PuzzleList() {
-  const start = usePuzzleStore((s) => s.start);
   const solvedIds = usePuzzleStore((s) => s.solvedIds);
   const solvedCount = usePuzzleStore((s) => s.solvedCount);
   const attemptedCount = usePuzzleStore((s) => s.attemptedCount);
   const streak = usePuzzleStore((s) => s.streak);
-  const loadGame = useGameStore((s) => s.loadGame);
-  const startPuzzleMode = useGameStore((s) => s.startPuzzle);
+  const navigate = useNavigate();
+  const setMobileSheet = useUiStore((s) => s.setMobileSheet);
 
   const [filter, setFilter] = useState<'all' | 1 | 2 | 3>('all');
   const filtered = PUZZLES.filter((p) => filter === 'all' || p.difficulty === filter);
 
   const launch = (puzzle: Puzzle) => {
-    const game = loadEmpty(puzzle.fen, { title: puzzle.title, source: 'editor' });
-    loadGame(game);
-    startPuzzleMode();                  // sets mode='puzzle' — keeps composer/analyze UI hidden
-    start(puzzle);
+    // PuzzleDetailRoute handles the actual store wiring on mount. We just
+    // change the URL — that keeps Back/Forward sensible and lets users link
+    // directly to a specific puzzle.
+    navigate(`/puzzles/${puzzle.id}`);
+    setMobileSheet(null);
   };
 
   return (
@@ -91,11 +93,10 @@ function PuzzleList() {
 function ActivePuzzle() {
   const active = usePuzzleStore((s) => s.active);
   const status = usePuzzleStore((s) => s.status);
-  const exit = usePuzzleStore((s) => s.exit);
   const start = usePuzzleStore((s) => s.start);
   const loadGame = useGameStore((s) => s.loadGame);
   const startPuzzleMode = useGameStore((s) => s.startPuzzle);
-  const endPuzzleMode = useGameStore((s) => s.endPuzzle);
+  const navigate = useNavigate();
   const [showHint, setShowHint] = useState(false);
 
   if (!active) return null;
@@ -112,7 +113,7 @@ function ActivePuzzle() {
     <div className="flex flex-col gap-3 h-full">
       <button
         className="btn-ghost text-xs self-start gap-1 -ml-2"
-        onClick={() => { exit(); endPuzzleMode(); }}
+        onClick={() => navigate('/puzzles')}
       >
         <ChevronRight size={12} className="rotate-180" /> Back to puzzles
       </button>

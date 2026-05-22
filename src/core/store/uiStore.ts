@@ -17,8 +17,9 @@ export type PieceSetId =
 export type RenderMode = '2d' | '3d';
 
 export type PanelView = 'openings' | 'import' | 'export' | 'settings' | 'puzzles' | 'pvp';
-/** Which bottom-sheet is open on mobile; null = closed. */
-export type MobileSheet = 'moves' | 'idea' | 'browse' | 'match' | null;
+/** Which bottom-sheet is open on mobile; null = closed.
+ *  `catalog` swaps content based on the current route (openings vs puzzles). */
+export type MobileSheet = 'moves' | 'idea' | 'catalog' | 'match' | null;
 
 interface UiState {
   boardTheme: BoardThemeId;
@@ -34,6 +35,13 @@ interface UiState {
   mobileSheet: MobileSheet;
   /** Mute PvP sound cues (move click, low-time tick, flag, start, end). */
   pvpMuted: boolean;
+  /** Activity sidebar — pinned-open on desktop, slide-over on mobile. Persisted
+   *  on desktop only; the slide-over should never start open on a fresh load. */
+  navOpen: boolean;
+  /** Settings slide-over open state (driven by the gear button + /settings route). */
+  settingsOpen: boolean;
+  /** Export modal open state (driven by the Export icon in the TopBar). */
+  exportOpen: boolean;
   setBoardTheme: (t: BoardThemeId) => void;
   setPieceSet: (p: PieceSetId) => void;
   setRenderMode: (m: RenderMode) => void;
@@ -45,6 +53,10 @@ interface UiState {
   setActivePanel: (p: PanelView) => void;
   setMobileSheet: (s: MobileSheet) => void;
   setPvpMuted: (v: boolean) => void;
+  setNavOpen: (v: boolean) => void;
+  toggleNav: () => void;
+  setSettingsOpen: (v: boolean) => void;
+  setExportOpen: (v: boolean) => void;
 }
 
 export const useUiStore = create<UiState>()(
@@ -61,6 +73,9 @@ export const useUiStore = create<UiState>()(
       activePanel: 'openings',
       mobileSheet: null,
       pvpMuted: false,
+      navOpen: true,
+      settingsOpen: false,
+      exportOpen: false,
       setBoardTheme: (t) => set({ boardTheme: t }),
       setPieceSet: (p) => set({ pieceSet: p }),
       setRenderMode: (m) => set({ renderMode: m }),
@@ -72,6 +87,10 @@ export const useUiStore = create<UiState>()(
       setActivePanel: (p) => set({ activePanel: p }),
       setMobileSheet: (s) => set({ mobileSheet: s }),
       setPvpMuted: (v) => set({ pvpMuted: v }),
+      setNavOpen: (v) => set({ navOpen: v }),
+      toggleNav: () => set((s) => ({ navOpen: !s.navOpen })),
+      setSettingsOpen: (v) => set({ settingsOpen: v }),
+      setExportOpen: (v) => set({ exportOpen: v }),
     }),
     {
       name: 'gambit:ui',
@@ -88,6 +107,7 @@ export const useUiStore = create<UiState>()(
         animationMs: s.animationMs,
         activePanel: s.activePanel,
         pvpMuted: s.pvpMuted,
+        navOpen: s.navOpen,
       }),
     },
   ),

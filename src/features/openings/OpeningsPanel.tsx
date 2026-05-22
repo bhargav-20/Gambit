@@ -1,15 +1,18 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { OPENING_CATEGORIES, OPENINGS } from './catalog';
 import type { Opening } from './catalog';
 import { useGameStore } from '@/core/store/gameStore';
+import { useUiStore } from '@/core/store/uiStore';
 import { Search, BookOpen } from 'lucide-react';
 import clsx from 'clsx';
 
 export function OpeningsPanel() {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<Opening['category'] | 'All'>('All');
-  const loadFromPgn = useGameStore((s) => s.loadFromPgn);
-  const currentTitle = useGameStore((s) => s.game.meta.title);
+  const currentId = useGameStore((s) => s.game.meta.openingId);
+  const navigate = useNavigate();
+  const setMobileSheet = useUiStore((s) => s.setMobileSheet);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -25,13 +28,13 @@ export function OpeningsPanel() {
   }, [query, category]);
 
   const pick = (o: Opening) => {
-    loadFromPgn(o.pgn, {
-      title: o.name,
-      description: o.description,
-      eco: o.eco,
-      openingId: o.id,
-      source: 'opening',
-    });
+    // URL is now the source of truth — the route loads the PGN. This keeps
+    // the back/forward buttons sensible and lets users share specific
+    // openings directly.
+    navigate(`/openings/${o.id}`);
+    // Close the mobile catalog sheet (if it's open) so the user lands on
+    // the board after picking.
+    setMobileSheet(null);
   };
 
   return (
@@ -61,7 +64,7 @@ export function OpeningsPanel() {
 
       <div className="flex-1 overflow-y-auto pr-1 -mr-1 flex flex-col gap-1.5">
         {filtered.map((o) => {
-          const active = o.name === currentTitle;
+          const active = o.id === currentId;
           return (
             <button
               key={o.id}

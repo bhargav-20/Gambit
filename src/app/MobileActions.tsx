@@ -1,19 +1,29 @@
+import { useMatch } from 'react-router-dom';
 import { useUiStore } from '@/core/store/uiStore';
 import { useGameStore } from '@/core/store/gameStore';
 import { List, Lightbulb, LayoutGrid, Swords } from 'lucide-react';
 import clsx from 'clsx';
 
 /**
- * Three large tap targets visible only on mobile. In visualizer/composer
- * modes they open Moves / Idea / Browse drawers. In PvP, the Moves+Idea
- * pair is replaced with a Match drawer that holds the resign/draw controls
- * and the in-progress move list.
+ * Mobile bottom action row — Moves / Idea / (route-aware fourth slot).
+ *
+ *   - In PvP: the fourth slot becomes a Match button that opens the resign/
+ *     draw/move-list sheet. Idea hides (no opening context in live games).
+ *   - On a catalog detail page (Openings or Puzzles): the fourth slot opens
+ *     the catalog bottom-sheet so the user can switch items.
+ *   - Elsewhere: only Moves + Idea show.
+ *
+ * Sidebar access has moved to the TopBar hamburger — that's why there's no
+ * "Browse" button for the activity nav here anymore.
  */
 export function MobileActions() {
   const setSheet = useUiStore((s) => s.setMobileSheet);
   const moveCount = useGameStore((s) => s.game.moves.length);
   const hasIdea = useGameStore((s) => Boolean(s.game.meta.openingId));
   const mode = useGameStore((s) => s.mode);
+  const isOpeningDetail = useMatch('/openings/:id');
+  const isPuzzleDetail = useMatch('/puzzles/:id');
+  const showCatalog = !!(isOpeningDetail || isPuzzleDetail);
 
   if (mode === 'pvp') {
     return (
@@ -25,16 +35,18 @@ export function MobileActions() {
           onClick={() => setSheet('match')}
         />
         <Action
-          icon={<LayoutGrid size={16} />}
-          label="Browse"
-          onClick={() => setSheet('browse')}
+          icon={<List size={16} />}
+          label="Moves"
+          sub={moveCount > 0 ? `${moveCount}` : undefined}
+          onClick={() => setSheet('moves')}
         />
       </div>
     );
   }
 
+  const cols = showCatalog ? 'grid-cols-3' : 'grid-cols-2';
   return (
-    <div className="lg:hidden grid grid-cols-3 gap-2">
+    <div className={clsx('lg:hidden grid gap-2', cols)}>
       <Action
         icon={<List size={16} />}
         label="Moves"
@@ -47,11 +59,13 @@ export function MobileActions() {
         sub={hasIdea ? '•' : undefined}
         onClick={() => setSheet('idea')}
       />
-      <Action
-        icon={<LayoutGrid size={16} />}
-        label="Browse"
-        onClick={() => setSheet('browse')}
-      />
+      {showCatalog && (
+        <Action
+          icon={<LayoutGrid size={16} />}
+          label="Catalog"
+          onClick={() => setSheet('catalog')}
+        />
+      )}
     </div>
   );
 }

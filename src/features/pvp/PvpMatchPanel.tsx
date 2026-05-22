@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '@/core/store/gameStore';
 import { usePvpStore } from '@/core/store/pvpStore';
 import { useUiStore } from '@/core/store/uiStore';
@@ -27,22 +28,23 @@ export function PvpMatchPanel() {
   const setMuted = useUiStore((s) => s.setPvpMuted);
   const localColor = usePvpStore((s) => s.localColor);
   const endPvp = useGameStore((s) => s.endPvp);
-  const setActivePanel = useUiStore((s) => s.setActivePanel);
-  const analyzeGame = useGameStore((s) => s.analyzeGame);
+  const navigate = useNavigate();
 
   const newRoom = () => {
+    // Tear down the session and bounce back to the lobby. The PlayRoute's
+    // exit effect will also clean up if the user navigates elsewhere first.
     closeCurrent();
     usePvpStore.getState().reset();
     endPvp();
-    setActivePanel('pvp');
+    navigate('/play');
   };
 
   const analyzeThis = () => {
+    // Drop the WebRTC channel but keep the played game in memory.
+    // /analyze handles flipping into analyze mode on mount.
     closeCurrent();
     usePvpStore.getState().reset();
-    // Stay on the current ply; flip into analyze on top of the played game.
-    analyzeGame();
-    setActivePanel('openings');
+    navigate('/analyze');
   };
 
   return (
