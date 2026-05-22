@@ -2,6 +2,15 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 export type BoardThemeId = 'midnight' | 'wood' | 'tournament' | 'ivory' | 'neon';
+/**
+ * App-wide background — affects the body fill, most visibly on Home and the
+ * catalog landings (board routes have a board covering most of the viewport).
+ *   midnight  — radial gradients on near-black; quiet, editorial.
+ *   checkered — subtle 80px chessboard pattern at very low opacity.
+ *   aurora    — mesh of violet/teal/pink radials over a bluer black.
+ *   wood      — warm amber/umber radials evoking a tournament wooden set.
+ */
+export type AppBackgroundId = 'midnight' | 'checkered' | 'aurora' | 'wood';
 export type PieceSetId =
   | 'cburnett'
   | 'merida'
@@ -24,6 +33,7 @@ export type MobileSheet = 'moves' | 'idea' | 'tools' | 'match' | null;
 
 interface UiState {
   boardTheme: BoardThemeId;
+  appBackground: AppBackgroundId;
   pieceSet: PieceSetId;
   renderMode: RenderMode;
   showCoords: boolean;
@@ -53,6 +63,7 @@ interface UiState {
   /** Import modal open state — paste PGN/FEN, URL fetch, fresh board. */
   importOpen: boolean;
   setBoardTheme: (t: BoardThemeId) => void;
+  setAppBackground: (b: AppBackgroundId) => void;
   setPieceSet: (p: PieceSetId) => void;
   setRenderMode: (m: RenderMode) => void;
   setShowCoords: (v: boolean) => void;
@@ -74,6 +85,7 @@ export const useUiStore = create<UiState>()(
   persist(
     (set) => ({
       boardTheme: 'midnight',
+      appBackground: 'midnight',
       pieceSet: 'cburnett',
       renderMode: '2d',
       showCoords: true,
@@ -89,6 +101,7 @@ export const useUiStore = create<UiState>()(
       shareOpen: false,
       importOpen: false,
       setBoardTheme: (t) => set({ boardTheme: t }),
+      setAppBackground: (b) => set({ appBackground: b }),
       setPieceSet: (p) => set({ pieceSet: p }),
       setRenderMode: (m) => set({ renderMode: m }),
       setShowCoords: (v) => set({ showCoords: v }),
@@ -111,6 +124,7 @@ export const useUiStore = create<UiState>()(
       // closed on a fresh page load.
       partialize: (s) => ({
         boardTheme: s.boardTheme,
+        appBackground: s.appBackground,
         pieceSet: s.pieceSet,
         renderMode: s.renderMode,
         showCoords: s.showCoords,

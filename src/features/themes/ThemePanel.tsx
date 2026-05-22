@@ -2,7 +2,8 @@ import { useUiStore } from '@/core/store/uiStore';
 import type { PieceSetId } from '@/core/store/uiStore';
 import { BOARD_THEMES } from './boardThemes';
 import { PIECE_SETS, findPieceSet } from './piecesets';
-import { Palette, Eye, Square, Gauge, Box, Crown } from 'lucide-react';
+import { APP_BACKGROUNDS } from './appBackgrounds';
+import { Palette, Eye, Square, Gauge, Box, Crown, Image as ImageIcon } from 'lucide-react';
 import clsx from 'clsx';
 
 export function ThemePanel() {
@@ -13,6 +14,38 @@ export function ThemePanel() {
         <Palette size={16} className="text-accent" />
         <h2 className="font-display text-lg">Theme & Display</h2>
       </div>
+
+      <Section icon={<ImageIcon size={14} />} title="Background">
+        <div className="grid grid-cols-2 gap-2">
+          {APP_BACKGROUNDS.map((b) => (
+            <button
+              key={b.id}
+              onClick={() => ui.setAppBackground(b.id)}
+              className={clsx(
+                'rounded-xl border p-2 transition-colors text-left',
+                ui.appBackground === b.id
+                  ? 'border-accent/60 bg-accent/5'
+                  : 'border-edge hover:border-edge-strong',
+              )}
+              title={b.description}
+            >
+              <div
+                className="aspect-[16/9] w-full rounded-md mb-1.5 border border-edge"
+                style={{
+                  backgroundColor: b.base,
+                  backgroundImage: b.previewImage,
+                  backgroundSize: b.previewSize ?? 'auto',
+                }}
+              />
+              <div className="text-xs font-medium">{b.label}</div>
+              <div className="text-[10px] text-ink-faint leading-tight mt-0.5">{b.description}</div>
+            </button>
+          ))}
+        </div>
+        <p className="text-[10px] text-ink-faint mt-1">
+          The background fills the app behind every page — most visible on Home and the catalog landings.
+        </p>
+      </Section>
 
       <Section icon={<Square size={14} />} title="Board theme">
         <div className="grid grid-cols-2 gap-2">

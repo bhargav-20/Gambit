@@ -12,10 +12,11 @@
     height: 100%;
   }
   body {
+    /* Background fill + pattern are owned by ThemeStyles based on the user's
+       appBackground setting — see src/features/themes/ThemeStyles.tsx. Only
+       the text + font defaults live here so a flash-of-unstyled-body still
+       looks reasonable. */
     @apply bg-bg text-ink antialiased font-sans;
-    background-image:
-      radial-gradient(1200px 600px at 80% -10%, rgba(233,180,101,0.08), transparent 60%),
-      radial-gradient(900px 500px at 10% 110%, rgba(110,140,200,0.06), transparent 60%);
     background-attachment: fixed;
   }
   ::selection {
