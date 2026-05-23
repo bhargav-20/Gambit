@@ -280,6 +280,102 @@ The image of the reigning World Champion clapping for his challenger is one of t
     },
   },
   {
+    id: 'karpov-kasparov-1985-g16',
+    title: 'Karpov vs Kasparov — Game 16, 1985 World Championship',
+    players: { white: 'Anatoly Karpov', black: 'Garry Kasparov', whiteElo: 2720, blackElo: 2700 },
+    event: 'World Championship Match',
+    site: 'Moscow',
+    date: '1985.10.15',
+    round: '16',
+    result: '0-1',
+    era: 'contemporary',
+    tags: ['World Championship', 'Sicilian Najdorf', 'Octopus knight', 'Kasparov'],
+    pgn: `[Event "World Championship Match"]
+[Site "Moscow"]
+[Date "1985.10.15"]
+[Round "16"]
+[White "Anatoly Karpov"]
+[Black "Garry Kasparov"]
+[Result "0-1"]
+
+1. e4 c5 2. Nf3 e6 3. d4 cxd4 4. Nxd4 Nc6 5. Nb5 d6 6. c4 Nf6 7. N1c3 a6
+8. Na3 d5 9. cxd5 exd5 10. exd5 Nb4 11. Be2 Bc5 12. O-O O-O 13. Bf3 Bf5
+14. Bg5 Re8 15. Qd2 b5 16. Rad1 Nd3 17. Nab1 h6 18. Bh4 b4 19. Na4 Bd6
+20. Bg3 Rc8 21. b3 g5 22. Bxd6 Qxd6 23. g3 Nd7 24. Bg2 Qf6 25. a3 a5
+26. axb4 axb4 27. Qa2 Bg6 28. d6 g4 29. Qd2 Kg7 30. f3 Qxd6 31. fxg4 Qd4+
+32. Kh1 Nf6 33. Rf4 Ne4 34. Qxd3 Nf2+ 35. Rxf2 Bxd3 36. Rfd2 Qe3 37. Rxd3 Rc1
+38. Nb2 Qf2 39. Nd2 Rxd1+ 40. Nxd1 Re1+ 0-1
+`,
+    narrative:
+      `Going into game sixteen of the 1985 World Championship, Garry Kasparov trailed Anatoly Karpov by a point and had to make his Najdorf preparation count. What he produced — a knight planted on d3 from move sixteen onward, refusing every offer to be exchanged or chased — became one of the defining images of modern chess.
+
+The opening is a sharp Taimanov-Najdorf line, but the position after 16...Nd3 is not really an opening anymore: it's a structural sacrifice of mobility for permanent piece activity. The black knight on d3 cannot be touched. White's queenside pieces (Nab1, Bg3) huddle around it; Karpov spends the next dozen moves trying to dislodge it and failing. By move 24 Kasparov has every minor piece on a great square and a passed d-pawn coming. Karpov, normally a positional master, has no plan.
+
+The denouement is brisk. 33...Ne4! introduces a second piece into the attack; 34. Qxd3 surrenders the queen for the bishop — Karpov correctly judging that defending two heavy pieces against a coordinated minor-piece assault was hopeless. Nine moves later Kasparov delivered the simple 40...Re1+, and Karpov resigned the game.`,
+    outcome:
+      `Kasparov drew level in the match and, on November 9, 1985, defeated Karpov in game twenty-four to become — at twenty-two — the youngest World Chess Champion in history, ending Karpov's ten-year reign. The "octopus knight" on d3 has appeared in every monograph on the Najdorf since, and is the canonical example used to teach that piece activity outweighs material when no exchange is possible.`,
+    keyMoments: [
+      { ply: 32, label: '16...Nd3 — the knight lands on d3' },
+      { ply: 33, label: '17. Nab1 — White cedes mobility to defend' },
+      { ply: 66, label: '33...Ne4! — second piece joins the attack' },
+      { ply: 67, label: '34. Qxd3 — Karpov gives up the queen' },
+      { ply: 80, label: '40...Re1+ — and Karpov resigns' },
+    ],
+    moveNotes: {
+      31: "Nd3 — the knight lands on the famous square and will not be moved for the rest of the game. Every white piece must work around it.",
+      32: "Nab1 — Karpov retreats to defend, ceding the entire queenside to Kasparov's pieces.",
+      65: "Ne4! — the second knight joins the attack. White's coordination collapses.",
+      66: "Qxd3 — Karpov gives up his queen for the bishop, judging that defending two pieces against a coordinated minor assault was hopeless.",
+      79: "Re1+ — and Karpov resigns. Eight games later, Kasparov is World Champion at 22.",
+    },
+  },
+  {
+    id: 'kasparov-deep-blue-1997-g6',
+    title: 'Kasparov vs Deep Blue — Game 6, 1997 Match',
+    players: { white: 'Deep Blue', black: 'Garry Kasparov', blackElo: 2785 },
+    event: 'IBM Man vs Machine, Game 6',
+    site: 'New York',
+    date: '1997.05.11',
+    round: '6',
+    result: '1-0',
+    era: 'engine',
+    tags: ['Man vs Machine', 'Caro-Kann', 'Knight sacrifice', 'Historic'],
+    pgn: `[Event "IBM Man vs Machine"]
+[Site "New York"]
+[Date "1997.05.11"]
+[Round "6"]
+[White "Deep Blue"]
+[Black "Garry Kasparov"]
+[Result "1-0"]
+
+1. e4 c6 2. d4 d5 3. Nc3 dxe4 4. Nxe4 Nd7 5. Ng5 Ngf6 6. Bd3 e6 7. N1f3 h6
+8. Nxe6 Qe7 9. O-O fxe6 10. Bg6+ Kd8 11. Bf4 b5 12. a4 Bb7 13. Re1 Nd5
+14. Bg3 Kc8 15. axb5 cxb5 16. Qd3 Bc6 17. Bf5 exf5 18. Rxe7 Bxe7 19. c4 1-0
+`,
+    narrative:
+      `On May 11, 1997, in the thirty-fifth-floor TV studio of the Equitable Building in midtown Manhattan, Garry Kasparov sat down to play the sixth and deciding game of his rematch with IBM's Deep Blue. The match was tied 2½–2½. Game six lasted nineteen moves and changed the public understanding of computer chess overnight.
+
+Kasparov chose the Caro-Kann, an opening he had not used in serious play for years — and, fatefully, allowed the well-known 7...h6 move-order trap. Deep Blue immediately played 8. Nxe6!, a known but unusual piece sacrifice for two pawns and a permanent disruption of the black king. Kasparov's twentieth-century chess instincts told him the sacrifice was unsound; his preparation told him it had been refuted; the computer's preparation told it otherwise. By move 19 Kasparov resigned a position in which he was hopelessly tied down and would lose more material.
+
+The press conference that followed was historic. Kasparov accused IBM of human intervention, demanded the engine's logs (which IBM declined to release), and called the loss "psychologically broken." IBM dismantled Deep Blue and never publicly tested it again. The match score was 3½–2½ to the machine — the first time a reigning World Champion had lost a match to a computer under classical time controls.`,
+    outcome:
+      `Deep Blue's victory is now considered the symbolic moment when computer chess passed the human apex. IBM retired the machine; Kasparov spent years writing about the experience, eventually publishing Deep Thinking in 2017. Twenty years on, even smartphone-strength engines routinely outplay grandmasters. The 1997 rematch is the game-six PGN every history of artificial intelligence cites.`,
+    keyMoments: [
+      { ply: 14, label: "7...h6 — Kasparov walks into a known trap" },
+      { ply: 15, label: '8. Nxe6! — the piece sacrifice' },
+      { ply: 19, label: '10. Bg6+ — the black king is stranded on d8' },
+      { ply: 35, label: '18. Rxe7 — the final blow' },
+      { ply: 37, label: '19. c4 — Kasparov resigns' },
+    ],
+    moveNotes: {
+      13: "h6 — Kasparov, possibly believing the line was refuted, walks straight into the trap. The sacrifice on e6 is now nearly forced.",
+      14: "Nxe6! — Deep Blue spends two pawns to permanently fracture the black king position. Engines of the era could see the long-term coordination problem; Kasparov had hoped the machine wouldn't.",
+      18: "Bg6+ — the king is forced to d8 with no way to castle. Black's queen, rooks, and bishop are tangled together.",
+      34: "Rxe7 — Deep Blue cashes the attack. Black's structure collapses.",
+      36: "c4 — and Kasparov resigns. The match is 3½–2½ to the machine.",
+    },
+  },
+  {
     id: 'kasparovs-immortal',
     title: "Kasparov's Immortal — vs Topalov, Wijk aan Zee 1999",
     players: { white: 'Garry Kasparov', black: 'Veselin Topalov', whiteElo: 2812, blackElo: 2700 },
