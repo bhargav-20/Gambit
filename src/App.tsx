@@ -9,6 +9,7 @@ import { PuzzlesRoute } from './routes/PuzzlesRoute';
 import { PuzzleDetailRoute } from './routes/PuzzleDetailRoute';
 import { PlayRoute } from './routes/PlayRoute';
 import { AnalyzeRoute } from './routes/AnalyzeRoute';
+import { SetupRoute } from './routes/SetupRoute';
 import { GamesRoute } from './routes/GamesRoute';
 import { GameDetailRoute } from './routes/GameDetailRoute';
 import { NotFound } from './routes/NotFound';
@@ -39,6 +40,7 @@ export default function App() {
             modal, and free-play is now inside /analyze. The path stays in
             this comment so a future re-add doesn't trip on the gap. */}
         <Route path="analyze" element={<AnalyzeRoute />} />
+        <Route path="setup" element={<SetupRoute />} />
         <Route path="games" element={<GamesRoute />} />
         <Route path="games/:gameId" element={<GameDetailRoute />} />
         <Route path="*" element={<NotFound />} />

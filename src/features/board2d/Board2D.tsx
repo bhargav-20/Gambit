@@ -9,11 +9,39 @@ import { useUiStore } from '@/core/store/uiStore';
 import { usePuzzleStore } from '@/core/store/puzzleStore';
 import { useAnalysisStore } from '@/core/store/analysisStore';
 import { usePvpStore } from '@/core/store/pvpStore';
+import { useSetupStore } from '@/core/store/setupStore';
+import type { FenPiece } from '@/core/store/setupStore';
 import { sendLocalMove } from '@/features/pvp/session';
 import { dests, turnColor } from '@/core/chess/legal';
 import type { Square } from '@/core/chess/types';
 import { PromotionPicker } from './PromotionPicker';
 import { CoordOverlay } from './CoordOverlay';
+
+// chessground uses long role names; we need single-char FEN letters.
+const ROLE_TO_LETTER: Record<string, 'p' | 'n' | 'b' | 'r' | 'q' | 'k'> = {
+  pawn: 'p',
+  knight: 'n',
+  bishop: 'b',
+  rook: 'r',
+  queen: 'q',
+  king: 'k',
+};
+
+/**
+ * Mirror chessground's piece state into setupStore. Called after a free-edit
+ * drag (events.change). Replaces the entire squares map so drag-off-board
+ * (deleteOnDropOff) is naturally captured — the removed piece simply doesn't
+ * appear in the new map.
+ */
+function syncSetupStoreFromBoard(api: Api) {
+  const next: Partial<Record<Square, FenPiece>> = {};
+  api.state.pieces.forEach((piece, key) => {
+    const letter = ROLE_TO_LETTER[piece.role];
+    if (!letter) return;
+    next[key as Square] = (piece.color === 'white' ? letter.toUpperCase() : letter) as FenPiece;
+  });
+  useSetupStore.getState().setSquares(next);
+}
 
 function pieceCodeAt(fen: string, square: string): { piece: string; color: 'w' | 'b' } | null {
   const board = fen.split(' ')[0];
@@ -57,20 +85,35 @@ export function Board2D({ maxSize }: Props) {
   const pvpLocalColor = usePvpStore((s) => s.localColor);
   const pvpResult = usePvpStore((s) => s.result);
 
+  // Setup-mode subscriptions. We only read these to derive the FEN that gets
+  // pushed into chessground when the user is editing a position. Outside
+  // setup mode they're inert — Zustand re-runs the selectors on store
+  // updates but those updates only happen on the /setup route.
+  const setupSquares = useSetupStore((s) => s.squares);
+  const setupSide = useSetupStore((s) => s.sideToMove);
+  const setupCastling = useSetupStore((s) => s.castling);
+  const setupEp = useSetupStore((s) => s.enPassant);
+  const setupHalf = useSetupStore((s) => s.halfmove);
+  const setupFull = useSetupStore((s) => s.fullmove);
+
   // Mount chessground once.
   useEffect(() => {
     if (!hostRef.current) return;
-    const fen = useGameStore.getState().currentFen();
+    const mode0 = useGameStore.getState().mode;
+    const inSetup0 = mode0 === 'setup';
+    const fen = inSetup0 ? useSetupStore.getState().toFen() : useGameStore.getState().currentFen();
     const last = useGameStore.getState().lastMoveSquares();
     const tc0 = turnColor(fen);
     // In PvP, the board only accepts input from the local player AND only on
     // their turn, AND not after the game has ended.
     const movableColor0 =
-      mode === 'pvp'
-        ? (pvpResult ? undefined : pvpLocalColor === tc0 ? tc0 : undefined)
-        : editMode
-          ? tc0
-          : undefined;
+      inSetup0
+        ? 'both'
+        : mode === 'pvp'
+          ? (pvpResult ? undefined : pvpLocalColor === tc0 ? tc0 : undefined)
+          : editMode
+            ? tc0
+            : undefined;
     const config: Config = {
       fen,
       // chessground's configure() does NOT read side-to-move from the FEN —
@@ -83,12 +126,20 @@ export function Board2D({ maxSize }: Props) {
       lastMove: last ? [last[0], last[1]] : undefined,
       animation: { enabled: true, duration: animationMs },
       movable: {
-        free: false,
+        free: inSetup0,
         color: movableColor0,
-        dests: movableColor0 ? dests(fen) : new Map(),
-        showDests: showLegalDots,
+        dests: inSetup0 ? new Map() : (movableColor0 ? dests(fen) : new Map()),
+        showDests: !inSetup0 && showLegalDots,
         events: {
           after: (from, to) => {
+            if (useGameStore.getState().mode === 'setup') {
+              // Free-edit drag: piece moves from `from` to `to`. chessground
+              // has already rendered it visually; mirror the change into
+              // setupStore as a single `movePiece` call so one drag = one
+              // undo step.
+              useSetupStore.getState().movePiece(from as Square, to as Square);
+              return;
+            }
             // Detect promotion: a pawn moving to the back rank for its color.
             const beforeFen = useGameStore.getState().currentFen();
             const moved = pieceCodeAt(beforeFen, from);
@@ -168,9 +219,34 @@ export function Board2D({ maxSize }: Props) {
           },
         },
       },
-      draggable: { showGhost: true, enabled: true },
+      draggable: { showGhost: true, enabled: true, deleteOnDropOff: inSetup0 },
       drawable: { enabled: true, visible: true, eraseOnClick: true },
       highlight: { lastMove: true, check: true },   // CSS controls visibility from the toggle
+      events: {
+        // Click-to-place for setup mode: if a tray piece is armed, clicking
+        // any square applies it (or clears the square for the eraser).
+        // Outside setup mode this is a no-op — chessground's default click
+        // handling (select-to-move) still runs alongside.
+        select: (key) => {
+          if (useGameStore.getState().mode !== 'setup') return;
+          const setup = useSetupStore.getState();
+          if (setup.armed === null) return;
+          if (setup.armed === 'eraser') {
+            setup.clearSquare(key as Square);
+          } else {
+            setup.setPiece(key as Square, setup.armed);
+          }
+        },
+        // Catches drag-off-board (deleteOnDropOff) — chessground removes the
+        // piece from its own state but we need to sync that into setupStore
+        // so the derived FEN agrees.
+        change: () => {
+          if (useGameStore.getState().mode !== 'setup') return;
+          const api = apiRef.current;
+          if (!api) return;
+          syncSetupStoreFromBoard(api);
+        },
+      },
     };
     apiRef.current = Chessground(hostRef.current, config);
     return () => {
@@ -184,31 +260,42 @@ export function Board2D({ maxSize }: Props) {
   // turnColor MUST be passed alongside the new fen — chessground's set()
   // updates piece positions from the FEN but leaves turnColor alone,
   // which would otherwise stick on white forever and reject black's moves.
+  //
+  // Setup mode is special: the FEN source is setupStore, there's no last
+  // move, both colors are movable, and free-edit is enabled (no dests).
   useEffect(() => {
     const api = apiRef.current;
     if (!api) return;
-    const fen = useGameStore.getState().currentFen();
-    const last = useGameStore.getState().lastMoveSquares();
-    const tc = turnColor(fen);
+    const inSetup = mode === 'setup';
+    const fen = inSetup
+      ? useSetupStore.getState().toFen()
+      : useGameStore.getState().currentFen();
+    const last = inSetup ? undefined : useGameStore.getState().lastMoveSquares();
+    const tc = inSetup ? setupSide : turnColor(fen);
     // PvP gating: only when it's our turn AND the game hasn't ended.
     const movableColor =
-      mode === 'pvp'
-        ? (pvpResult ? undefined : pvpLocalColor === tc ? tc : undefined)
-        : editMode
-          ? tc
-          : undefined;
+      inSetup
+        ? 'both'
+        : mode === 'pvp'
+          ? (pvpResult ? undefined : pvpLocalColor === tc ? tc : undefined)
+          : editMode
+            ? tc
+            : undefined;
     api.set({
       fen,
       turnColor: tc,
       lastMove: last ? ([last[0], last[1]] as Key[]) : undefined,
-      animation: { enabled: true, duration: animationMs },
+      animation: { enabled: !inSetup, duration: animationMs },
       movable: {
+        free: inSetup,
         color: movableColor,
-        dests: movableColor ? dests(fen) : new Map(),
-        showDests: showLegalDots,
+        dests: inSetup ? new Map() : (movableColor ? dests(fen) : new Map()),
+        showDests: !inSetup && showLegalDots,
       },
+      draggable: { showGhost: true, enabled: true, deleteOnDropOff: inSetup },
     });
-  }, [game, ply, editMode, showLegalDots, animationMs, mode, pvpLocalColor, pvpResult]);
+  }, [game, ply, editMode, showLegalDots, animationMs, mode, pvpLocalColor, pvpResult,
+      setupSquares, setupSide, setupCastling, setupEp, setupHalf, setupFull]);
 
   // Sync orientation.
   useEffect(() => {

@@ -45,15 +45,15 @@ export function AppShell() {
     }
   }, [location.pathname, setSettingsOpen, navigate]);
 
-  // Centralized cleanup when the user leaves an exclusive activity (puzzle
-  // or PvP). Each of these owns sticky state (active puzzle, open WebRTC
-  // channel, clocks, names) that other routes shouldn't inherit. Doing it
-  // here once means routes don't each need their own copy-pasted exit
-  // effect, and entering /analyze from a puzzle (the case that prompted
-  // this) leaves no puzzle baggage behind.
+  // Centralized cleanup when the user leaves an exclusive activity (puzzle,
+  // PvP, setup). Each of these owns sticky state (active puzzle, open WebRTC
+  // channel, clocks, names, free-edit mode) that other routes shouldn't
+  // inherit. Doing it here once means routes don't each need their own
+  // copy-pasted exit effect.
   useEffect(() => {
     const onPuzzleRoute = location.pathname.startsWith('/puzzles/');
     const onPlayRoute = location.pathname === '/play';
+    const onSetupRoute = location.pathname === '/setup';
 
     if (!onPuzzleRoute && usePuzzleStore.getState().active) {
       usePuzzleStore.getState().exit();
@@ -74,6 +74,27 @@ export function AppShell() {
         pvp.reset();
         if (useGameStore.getState().mode === 'pvp') useGameStore.getState().endPvp();
       }
+    }
+    if (!onSetupRoute && useGameStore.getState().mode === 'setup') {
+      // Flip away from setup mode so Board2D stops treating clicks as
+      // free-placement. The in-progress setup state itself stays in
+      // setupStore — coming back to /setup picks up where the user left
+      // off, which is what you'd expect from any drafting workspace.
+      useGameStore.setState({ mode: 'visualizer', editMode: false });
+    }
+    if (onSetupRoute && useGameStore.getState().mode !== 'setup') {
+      // Mirror of the cleanup above — flipping the mode is location-driven
+      // here rather than relying on SetupRoute's mount effect because some
+      // soft hash navigations don't re-fire route-mount effects under
+      // React Router. Anchoring on location.pathname makes the mode change
+      // deterministic regardless of how the route was entered.
+      useGameStore.setState({
+        mode: 'setup',
+        playing: false,
+        editMode: true,
+        analyzeSnapshot: null,
+        branchPly: null,
+      });
     }
   }, [location.pathname]);
 

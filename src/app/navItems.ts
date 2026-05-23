@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Home, BookOpen, Puzzle, Swords, Microscope, Trophy } from 'lucide-react';
+import { Home, BookOpen, Puzzle, Swords, Microscope, Trophy, Wand2 } from 'lucide-react';
 import { createElement } from 'react';
 
 export interface NavItem {
@@ -23,6 +23,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Openings', path: '/openings',  icon: createElement(BookOpen, { size: 16 }),       blurb: 'Replay the 100+ catalogued openings, study the ideas behind each' },
   { label: 'Puzzles',  path: '/puzzles',   icon: createElement(Puzzle, { size: 16 }),         blurb: 'Solve tactics, track streaks' },
   { label: 'Play',     path: '/play',      icon: createElement(Swords, { size: 16 }),         blurb: 'Live game on the same WiFi — scan a QR, no account, no server' },
+  { label: 'Setup',    path: '/setup',     icon: createElement(Wand2, { size: 16 }),          blurb: 'Build any position by hand — then send it to the engine' },
   { label: 'Analyze',  path: '/analyze',   icon: createElement(Microscope, { size: 16 }),     blurb: 'Play moves, branch the loaded game, get engine eval — your tinkering surface' },
   { label: 'Games',    path: '/games',     icon: createElement(Trophy, { size: 16 }),         blurb: 'Replay the games that shaped chess — Immortal, Opera, Game of the Century, more' },
 ];

@@ -1,7 +1,7 @@
 import { useMatch } from 'react-router-dom';
 import { useUiStore } from '@/core/store/uiStore';
 import { useGameStore } from '@/core/store/gameStore';
-import { List, Lightbulb, BookOpen, Puzzle, Microscope, Swords, Trophy } from 'lucide-react';
+import { List, Lightbulb, BookOpen, Puzzle, Microscope, Swords, Trophy, Wand2 } from 'lucide-react';
 import clsx from 'clsx';
 
 /**
@@ -23,6 +23,22 @@ export function MobileActions() {
   const isPuzzleDetail = useMatch('/puzzles/:id');
   const isGameDetail = useMatch('/games/:id');
   const isAnalyze = useMatch('/analyze');
+  const isSetup = useMatch('/setup');
+
+  // /setup has no relevant Moves or Idea content — the route is a position
+  // editor, not a game replay. Surface only a single Setup button that
+  // opens the SetupPanel drawer.
+  if (isSetup) {
+    return (
+      <div className="lg:hidden grid grid-cols-1 gap-2">
+        <Action
+          icon={<Wand2 size={16} />}
+          label="Set up"
+          onClick={() => setSheet('tools')}
+        />
+      </div>
+    );
+  }
 
   if (mode === 'pvp') {
     return (

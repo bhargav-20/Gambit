@@ -8,6 +8,7 @@ import { PuzzlePanel } from '@/features/puzzles/PuzzlePanel';
 import { GamesCatalog } from '@/features/games/GamesCatalog';
 import { AnalyzePanel } from '@/features/analysis/AnalyzePanel';
 import { PvpMatchPanel } from '@/features/pvp/PvpMatchPanel';
+import { SetupPanel } from '@/features/setup/SetupPanel';
 
 /**
  * Mobile bottom-sheets — one per kind of overlayable surface. Only one is
@@ -28,6 +29,7 @@ export function MobileDrawers() {
   const isPuzzles = useMatch('/puzzles/*');
   const isGames = useMatch('/games/*');
   const isAnalyze = useMatch('/analyze');
+  const isSetup = useMatch('/setup');
   const close = () => setSheet(null);
 
   const toolsTitle = isOpenings
@@ -38,7 +40,9 @@ export function MobileDrawers() {
         ? 'Games'
         : isAnalyze
           ? 'Engine'
-          : 'Tools';
+          : isSetup
+            ? 'Set up'
+            : 'Tools';
 
   return (
     <>
@@ -55,6 +59,7 @@ export function MobileDrawers() {
         {isPuzzles && <PuzzlePanel />}
         {isGames && <GamesCatalog />}
         {isAnalyze && <AnalyzePanel />}
+        {isSetup && <SetupPanel />}
       </BottomSheet>
       <BottomSheet open={sheet === 'match'} onClose={close} title="Match" heightVh={0.7}>
         <PvpMatchPanel />

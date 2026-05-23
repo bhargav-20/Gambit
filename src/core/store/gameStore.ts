@@ -30,7 +30,7 @@ export type Promotable = 'q' | 'r' | 'b' | 'n';
  *                  their turn. The pvpStore owns connection + clocks and
  *                  wires moves through applyMove just like every other mode.
  */
-export type GameMode = 'visualizer' | 'composer' | 'analyze' | 'puzzle' | 'pvp';
+export type GameMode = 'visualizer' | 'composer' | 'analyze' | 'puzzle' | 'pvp' | 'setup';
 
 export interface PendingPromotion {
   from: Square;
