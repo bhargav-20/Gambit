@@ -217,18 +217,18 @@ Byrne plays 18. Bxb6 — accepting the queen — and is then driven through a lo
     outcome:
       `The game launched Fischer's career. Within seven years he was US Champion, within fifteen the World Champion. His queen sacrifice for positional dominance is one of the half-dozen most-replayed games in the world.`,
     keyMoments: [
-      { ply: 21, label: '11...Na4!! — the offer that started it all' },
-      { ply: 33, label: '17...Be6!! — the queen sacrifice appears' },
+      { ply: 22, label: '11...Na4!! — the offer that started it all' },
+      { ply: 34, label: '17...Be6!! — the queen sacrifice appears' },
       { ply: 35, label: '18. Bxb6 — Byrne accepts' },
       { ply: 47, label: "24. Qb4 Ra4 — Fischer's pieces swarm" },
-      { ply: 81, label: '41...Rc2# — mate' },
+      { ply: 82, label: '41...Rc2# — mate' },
     ],
     moveNotes: {
-      20: "Na4!! — Fischer offers the knight to crack the queenside open.",
-      32: "Be6!! — the queen sacrifice. White must accept or lose more material.",
+      21: "Na4!! — Fischer offers the knight to crack the queenside open.",
+      33: "Be6!! — the queen sacrifice. White must accept or lose more material.",
       34: "Bxb6 — Byrne accepts the queen, and the long forced sequence begins.",
       46: "Qb4 Ra4 — Fischer's pieces swarm Byrne's king.",
-      80: "Rc2# — mate, sixteen moves after the queen was offered. Fischer was 13.",
+      81: "Rc2# — mate, sixteen moves after the queen was offered. Fischer was 13.",
     },
   },
   {
