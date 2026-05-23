@@ -6,6 +6,7 @@ import { loadEmpty } from '@/core/chess/pgn';
 import { Wand2, Trash2, RotateCcw, Image as ImageIcon, Copy, AlertTriangle, Check, ArrowRight, FlipHorizontal2, Undo2 } from 'lucide-react';
 import clsx from 'clsx';
 import { checkValidity } from './validity';
+import { ImportFromImageModal } from './imageImport/ImportFromImageModal';
 
 /**
  * Right-panel content for the /setup route. Side-to-move toggle, castling
@@ -57,6 +58,7 @@ export function SetupPanel() {
   const [pasteValue, setPasteValue] = useState('');
   const [pasteError, setPasteError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [imageImportOpen, setImageImportOpen] = useState(false);
 
   // Cmd/Ctrl+Z while this panel is mounted pops the most recent change. We
   // bind here (not in a global hook) so the binding is scoped to /setup and
@@ -193,15 +195,15 @@ export function SetupPanel() {
         </button>
       </div>
 
-      {/* Image import — stub for now */}
+      {/* Image import — opens the recognition modal */}
       <button
-        className="btn h-8 text-xs justify-center gap-1.5 opacity-60 cursor-not-allowed"
-        title="Coming soon — drop a board screenshot, detect the position"
-        disabled
+        className="btn h-8 text-xs justify-center gap-1.5"
+        title="Drop a board screenshot, auto-detect the position"
+        onClick={() => setImageImportOpen(true)}
       >
         <ImageIcon size={12} /> Import from image
-        <span className="text-[9px] uppercase tracking-wider text-ink-faint ml-1">soon</span>
       </button>
+      <ImportFromImageModal open={imageImportOpen} onClose={() => setImageImportOpen(false)} />
 
       {/* FEN strip + paste */}
       <div className="flex flex-col gap-1.5">

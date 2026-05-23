@@ -68,6 +68,16 @@ interface Props {
 export function Board2D({ maxSize }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const apiRef = useRef<Api | null>(null);
+  // Set true while we're programmatically pushing a FEN into chessground
+  // (e.g. when setupStore changes after Import-from-image's loadFen). chessground
+  // fires `events.change` after every api.set that alters pieces, including
+  // our own programmatic ones — and our setup-mode `change` handler would
+  // otherwise read chessground's just-updated state and re-write setupStore
+  // with effectively the same data… in the wrong order, sometimes catching
+  // chessground mid-update and clobbering the new FEN with stale state.
+  // Gate the handler on this flag so we only sync FROM chessground TO
+  // setupStore for user-initiated changes (drag-off-board).
+  const dispatchingRef = useRef(false);
 
   const game = useGameStore((s) => s.game);
   const ply = useGameStore((s) => s.ply);
@@ -239,9 +249,12 @@ export function Board2D({ maxSize }: Props) {
         },
         // Catches drag-off-board (deleteOnDropOff) — chessground removes the
         // piece from its own state but we need to sync that into setupStore
-        // so the derived FEN agrees.
+        // so the derived FEN agrees. Gated by `dispatchingRef` so our own
+        // programmatic api.set() calls don't trigger a sync-back that would
+        // overwrite the new setupStore state with chessground's old pieces.
         change: () => {
           if (useGameStore.getState().mode !== 'setup') return;
+          if (dispatchingRef.current) return;
           const api = apiRef.current;
           if (!api) return;
           syncSetupStoreFromBoard(api);
@@ -281,19 +294,27 @@ export function Board2D({ maxSize }: Props) {
           : editMode
             ? tc
             : undefined;
-    api.set({
-      fen,
-      turnColor: tc,
-      lastMove: last ? ([last[0], last[1]] as Key[]) : undefined,
-      animation: { enabled: !inSetup, duration: animationMs },
-      movable: {
-        free: inSetup,
-        color: movableColor,
-        dests: inSetup ? new Map() : (movableColor ? dests(fen) : new Map()),
-        showDests: !inSetup && showLegalDots,
-      },
-      draggable: { showGhost: true, enabled: true, deleteOnDropOff: inSetup },
-    });
+    dispatchingRef.current = true;
+    try {
+      api.set({
+        fen,
+        turnColor: tc,
+        lastMove: last ? ([last[0], last[1]] as Key[]) : undefined,
+        animation: { enabled: !inSetup, duration: animationMs },
+        movable: {
+          free: inSetup,
+          color: movableColor,
+          dests: inSetup ? new Map() : (movableColor ? dests(fen) : new Map()),
+          showDests: !inSetup && showLegalDots,
+        },
+        draggable: { showGhost: true, enabled: true, deleteOnDropOff: inSetup },
+      });
+    } finally {
+      // Clear the gate on the next microtask so any synchronous
+      // events.change from chessground's update is suppressed, but a real
+      // user interaction (next tick or later) goes through normally.
+      queueMicrotask(() => { dispatchingRef.current = false; });
+    }
   }, [game, ply, editMode, showLegalDots, animationMs, mode, pvpLocalColor, pvpResult,
       setupSquares, setupSide, setupCastling, setupEp, setupHalf, setupFull]);
 
