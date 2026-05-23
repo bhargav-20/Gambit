@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useGameStore } from '@/core/store/gameStore';
 import { useUiStore } from '@/core/store/uiStore';
 import { exportGameToVideo } from './exportVideo';
-import type { Aspect } from './exportVideo';
-import { Download, Smartphone, Monitor, Square, Video, Loader2 } from 'lucide-react';
+import type { Aspect, Quality } from './exportVideo';
+import { Download, Smartphone, Monitor, Square, Video, Loader2, Zap, Gem } from 'lucide-react';
 import clsx from 'clsx';
 
 const ASPECTS: Array<{ id: Aspect; label: string; icon: React.ReactNode; sub: string }> = [
@@ -12,8 +12,14 @@ const ASPECTS: Array<{ id: Aspect; label: string; icon: React.ReactNode; sub: st
   { id: 'square', label: 'Square', icon: <Square size={14} />, sub: '1080×1080 — Instagram' },
 ];
 
+const QUALITIES: Array<{ id: Quality; label: string; icon: React.ReactNode; sub: string }> = [
+  { id: 'fast', label: 'Fast', icon: <Zap size={14} />, sub: 'MediaRecorder · WebM · real-time' },
+  { id: 'high', label: 'High quality', icon: <Gem size={14} />, sub: 'ffmpeg · MP4 H.264 · plays everywhere' },
+];
+
 export function ExportPanel() {
   const [aspect, setAspect] = useState<Aspect>('portrait');
+  const [quality, setQuality] = useState<Quality>('fast');
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +47,7 @@ export function ExportPanel() {
         orientation,
         title: game.meta.title,
         subtitle: game.meta.eco ? `ECO ${game.meta.eco}` : game.meta.description,
+        quality,
         onProgress: setProgress,
       });
       const url = URL.createObjectURL(res.blob);
@@ -60,6 +67,15 @@ export function ExportPanel() {
     a.download = `${slug || 'game'}-${aspect}.${preview.extension}`;
     a.click();
   };
+
+  const isHigh = quality === 'high';
+  const busyLabel = busy
+    ? isHigh
+      ? progress < 0.7
+        ? `Rendering frames… ${Math.round((progress / 0.7) * 100)}%`
+        : `Encoding MP4… ${Math.round(((progress - 0.7) / 0.3) * 100)}%`
+      : `Rendering… ${Math.round(progress * 100)}%`
+    : 'Render video';
 
   return (
     <div className="flex flex-col gap-4 h-full">
@@ -89,9 +105,30 @@ export function ExportPanel() {
         </div>
       </div>
 
-      <div className="panel-tight p-3 text-xs text-ink-muted">
-        Currently uses <code className="text-ink">MediaRecorder</code> — fast, browser-native.
-        High-quality MP4 via <code className="text-ink">ffmpeg.wasm</code> is on the roadmap.
+      <div className="flex flex-col gap-2">
+        <span className="label">Quality</span>
+        <div className="grid grid-cols-2 gap-2">
+          {QUALITIES.map((q) => (
+            <button
+              key={q.id}
+              onClick={() => setQuality(q.id)}
+              className={clsx(
+                'rounded-lg border p-2 text-left transition-colors',
+                quality === q.id ? 'border-accent/60 bg-accent/10' : 'border-edge hover:border-edge-strong',
+              )}
+            >
+              <div className="flex items-center gap-1.5 text-xs font-medium">
+                {q.icon} {q.label}
+              </div>
+              <div className="text-[10px] text-ink-faint mt-1">{q.sub}</div>
+            </button>
+          ))}
+        </div>
+        {isHigh && (
+          <p className="text-[11px] text-ink-faint">
+            First high-quality render downloads ~32 MB of ffmpeg core (cached after). Encoding runs ~3–5× real-time.
+          </p>
+        )}
       </div>
 
       <button
@@ -100,7 +137,7 @@ export function ExportPanel() {
         disabled={!canExport || busy}
       >
         {busy ? <Loader2 size={14} className="animate-spin" /> : <Video size={14} />}
-        {busy ? `Rendering… ${Math.round(progress * 100)}%` : 'Render video'}
+        {busyLabel}
       </button>
 
       {!canExport && (
