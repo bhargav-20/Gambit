@@ -5,6 +5,7 @@ import { exportGameToVideo } from './exportVideo';
 import type { Aspect, Quality } from './exportVideo';
 import { Download, Smartphone, Monitor, Square, Video, Loader2, Zap, Gem } from 'lucide-react';
 import clsx from 'clsx';
+import { NarrationPreview } from './NarrationPreview';
 
 const ASPECTS: Array<{ id: Aspect; label: string; icon: React.ReactNode; sub: string }> = [
   { id: 'portrait', label: 'Portrait', icon: <Smartphone size={14} />, sub: '1080×1920 — Reels / TikTok' },
@@ -130,6 +131,14 @@ export function ExportPanel() {
           </p>
         )}
       </div>
+
+      {/* Narration preview — Phase 1a of the narrated-video roadmap. Reads
+          the auto-generated commentary aloud via SpeechSynthesis so the
+          user can hear the prose before we invest in capturing audio for
+          the actual export. SpeechSynthesis output doesn't flow through
+          Web Audio, so this stays preview-only; the export-time TTS will
+          be neural (kokoro-js or piper-tts-web) in a follow-up phase. */}
+      <NarrationPreview />
 
       <button
         className="btn-primary"
