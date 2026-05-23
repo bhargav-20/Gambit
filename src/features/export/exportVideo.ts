@@ -3,6 +3,8 @@ import type { BoardThemeId, PieceSetId } from '@/core/store/uiStore';
 import { BoardRenderer, buildSnapshots } from './render';
 import type { TimedSnapshot } from './render';
 import { encodeFrames, getFfmpeg } from './ffmpegEncoder';
+import type { NarrationScript } from './narration';
+import { buildNarrationTimeline, audioBufferToWav } from './tts/timeline';
 
 export type Aspect = 'portrait' | 'landscape' | 'square';
 export type Quality = 'fast' | 'high';
@@ -12,6 +14,23 @@ const DIMENSIONS: Record<Aspect, { w: number; h: number }> = {
   landscape: { w: 1920, h: 1080 },
   square: { w: 1080, h: 1080 },
 };
+
+export interface NarrationOptions {
+  /** Generated narration script (intro + per-move + outro). */
+  script: NarrationScript;
+  /** Kokoro voice id (e.g. `af_heart`). System voices can't be captured. */
+  voice: string;
+  /** Optional background music as an audio blob. Looped under the voice. */
+  music?: Blob;
+  /** 0..1, default 1. */
+  voiceVolume?: number;
+  /** 0..1, default 0.35. */
+  musicVolume?: number;
+  /** Auto-duck music while voice plays. Default true. */
+  autoDuck?: boolean;
+  /** Fired with (done, total) as each line synthesizes. */
+  onSynthesisProgress?: (done: number, total: number) => void;
+}
 
 export interface ExportOptions {
   aspect: Aspect;
@@ -31,6 +50,9 @@ export interface ExportOptions {
    * High-quality is slower (~3–5× real-time) and downloads ~32 MB the first time.
    */
   quality?: Quality;
+  /** When set, narration audio is synthesized and muxed into the exported
+   *  MP4. Only supported with quality='high' (the ffmpeg path). */
+  narration?: NarrationOptions;
   onProgress?: (p: number) => void;
 }
 
@@ -168,6 +190,19 @@ export async function exportGameToVideo(game: LoadedGame, opts: ExportOptions): 
   });
   await renderer.waitForAssets();
 
+  // Narration changes the picture entirely: synth happens first so we
+  // know each line's duration, then snapshots' hold-durations are
+  // stretched per-move to fit the audio. Falls through to the standard
+  // ffmpeg path with audio added.
+  if (opts.narration) {
+    if (quality !== 'high') {
+      throw new Error('Narrated export requires the High-quality (ffmpeg) backend.');
+    }
+    return exportNarratedViaFfmpeg(
+      canvas, renderer, game, animMs, holdMs, introMs, outroMs, fps, opts.narration, opts.onProgress,
+    );
+  }
+
   const snapshots = buildSnapshots(game, animMs, holdMs);
   const totalMs = introMs + snapshots.reduce((acc, s) => acc + s.animDurationMs + s.holdDurationMs, 0) + outroMs;
 
@@ -270,4 +305,169 @@ async function exportViaFfmpeg(
   // BlobPart type (TS 5.7+) rejects Uint8Array<ArrayBufferLike> otherwise.
   const blob = new Blob([new Uint8Array(data)], { type: 'video/mp4' });
   return { blob, mime: 'video/mp4', extension: 'mp4', durationMs: totalMs };
+}
+
+/**
+ * Narrated export. Three phases:
+ *
+ *   1. Pre-synthesize the narration script (kokoro per line) into a single
+ *      AudioBuffer + per-line timing schedule. This is the slow phase —
+ *      synthesis is ~2–3× real-time on WebGPU, much slower on WASM. The
+ *      timeline tells us how long each move's video slot should be.
+ *
+ *   2. (a) Build snapshots with per-move hold durations stretched to the
+ *          narration timing. Each move's `holdDurationMs` = timeline's
+ *          slot minus animMs.
+ *      (b) Mix the voice timeline against background music (if any) via
+ *          an OfflineAudioContext at the timeline's full duration. Output
+ *          is a 16-bit PCM WAV.
+ *      (c) Render every frame to JPEG and write to MEMFS, just like the
+ *          non-narrated ffmpeg path.
+ *
+ *   3. ffmpeg muxes the frames + audio.wav into a single MP4.
+ *
+ * Music is decoded once into an AudioBuffer and laid down as a looped
+ * source against the offline destination. Ducking automation matches the
+ * live-mixer's curve so the export sounds like the preview.
+ */
+async function exportNarratedViaFfmpeg(
+  canvas: HTMLCanvasElement,
+  renderer: BoardRenderer,
+  game: LoadedGame,
+  animMs: number,
+  defaultHoldMs: number,
+  introMsDefault: number,
+  outroMsDefault: number,
+  fps: number,
+  narration: NarrationOptions,
+  onProgress?: (p: number) => void,
+): Promise<ExportResult> {
+  const ff = await getFfmpeg();
+
+  // ---------- Phase 1 (0..0.5): synthesize narration ----------
+  // Synthesis dominates the export time. We give it 50% of the bar so the
+  // user sees forward progress; the rest splits 35% to frame render and
+  // 15% to ffmpeg encoding.
+  const timeline = await buildNarrationTimeline(narration.script, {
+    voice: narration.voice,
+    animMs,
+    minHoldMs: defaultHoldMs,
+    introHoldMs: introMsDefault,
+    outroHoldMs: outroMsDefault,
+    onProgress: (done, total) => {
+      onProgress?.((done / total) * 0.5);
+      narration.onSynthesisProgress?.(done, total);
+    },
+  });
+
+  // ---------- Phase 2a: build narration-driven snapshots ----------
+  // Per-move slots come from the timeline. Intro & outro are separate
+  // entries; the move entries map one-to-one to game.moves.
+  const introMs = timeline.lineTimings[0].slotMs;
+  // outro slot is folded into totalMs already; we don't read it separately.
+  const snapshots = buildSnapshots(game, animMs, defaultHoldMs);
+  // Stretch each move's hold so the on-screen time matches the speech.
+  for (let i = 0; i < snapshots.length; i++) {
+    const moveTiming = timeline.lineTimings[i + 1]; // +1 to skip intro
+    if (moveTiming) {
+      snapshots[i].holdDurationMs = Math.max(0, moveTiming.slotMs - snapshots[i].animDurationMs);
+    }
+  }
+  const totalMs = timeline.totalMs;
+  const totalFrames = Math.ceil((totalMs / 1000) * fps);
+
+  // ---------- Phase 2b: render audio.wav via OfflineAudioContext ----------
+  const audioBytes = await renderMixedAudio(timeline, narration);
+  await ff.writeFile('audio.wav', audioBytes);
+
+  // ---------- Phase 2c: render frames to MEMFS ----------
+  const frameDurMs = 1000 / fps;
+  for (let i = 0; i < totalFrames; i++) {
+    const elapsed = i * frameDurMs;
+    renderAtElapsed(renderer, snapshots, game.initialFen, introMs, totalMs, elapsed);
+    const bytes = await canvasToJpegBytes(canvas, 0.92);
+    const name = `f${String(i).padStart(5, '0')}.jpg`;
+    await ff.writeFile(name, bytes);
+    if (i % 4 === 0) onProgress?.(0.5 + (i / totalFrames) * 0.35);
+    if (i % 8 === 0) await new Promise<void>((r) => setTimeout(r, 0));
+  }
+
+  // ---------- Phase 3 (0.85..1.0): mux ----------
+  const data = await encodeFrames(totalFrames, {
+    fps,
+    withAudio: true,
+    onProgress: (p) => onProgress?.(0.85 + p * 0.15),
+  });
+  onProgress?.(1);
+  const blob = new Blob([new Uint8Array(data)], { type: 'video/mp4' });
+  return { blob, mime: 'video/mp4', extension: 'mp4', durationMs: totalMs };
+}
+
+/**
+ * Render the narration timeline + optional looped music into a single WAV
+ * using OfflineAudioContext. The duck automation mirrors the live mixer's
+ * shape so the preview sounds like the export.
+ */
+async function renderMixedAudio(
+  timeline: { combinedBuffer: AudioBuffer; lineTimings: { startMs: number; speechMs: number }[]; totalMs: number; sampleRate: number },
+  narration: NarrationOptions,
+): Promise<Uint8Array> {
+  const sampleRate = timeline.sampleRate;
+  const totalSamples = Math.ceil((timeline.totalMs / 1000) * sampleRate);
+  const offline = new OfflineAudioContext(1, totalSamples, sampleRate);
+
+  // Voice source ----------------------------------------------------------
+  const voiceGain = offline.createGain();
+  voiceGain.gain.value = narration.voiceVolume ?? 1;
+  voiceGain.connect(offline.destination);
+  const voiceSrc = offline.createBufferSource();
+  voiceSrc.buffer = timeline.combinedBuffer;
+  voiceSrc.connect(voiceGain);
+  voiceSrc.start(0);
+
+  // Music source ---------------------------------------------------------
+  if (narration.music) {
+    try {
+      const arr = await narration.music.arrayBuffer();
+      // Decoders mutate buffers on Safari — copy first so a retry sees
+      // the same data.
+      const decoded = await offline.decodeAudioData(arr.slice(0));
+      const musicGain = offline.createGain();
+      musicGain.gain.value = narration.musicVolume ?? 0.35;
+      const duckGain = offline.createGain();
+      duckGain.gain.value = 1;
+      musicGain.connect(duckGain).connect(offline.destination);
+      const musicSrc = offline.createBufferSource();
+      musicSrc.buffer = decoded;
+      musicSrc.loop = true;
+      musicSrc.connect(musicGain);
+      musicSrc.start(0);
+
+      // Schedule the duck automation across every voice line. This is the
+      // crucial bit: offline rendering doesn't have a `voiceSrc.onended`
+      // we can hook, so we pre-schedule the gain ramps from the timeline
+      // we computed earlier.
+      if (narration.autoDuck !== false) {
+        const duckLevel = 0.25;
+        const attack = 0.18;
+        const release = 0.4;
+        const releaseDelay = 0.1;
+        for (const t of timeline.lineTimings) {
+          if (t.speechMs <= 0) continue;
+          const startSec = t.startMs / 1000;
+          const endSec = (t.startMs + t.speechMs) / 1000;
+          duckGain.gain.setTargetAtTime(duckLevel, startSec, attack);
+          duckGain.gain.setTargetAtTime(1, endSec + releaseDelay, release);
+        }
+      }
+    } catch (e) {
+      // If music decode fails (corrupt upload, codec we can't read), drop
+      // music entirely rather than failing the whole export. The voice
+      // track is still useful on its own.
+      console.warn('[narrated-export] music decode failed:', (e as Error).message);
+    }
+  }
+
+  const rendered = await offline.startRendering();
+  return audioBufferToWav(rendered);
 }

@@ -48,6 +48,11 @@ export interface EncodeOptions {
   fps: number;
   /** Called with 0..1 as ffmpeg reports progress. */
   onProgress?: (p: number) => void;
+  /** Optional WAV audio that gets muxed alongside the video. When set the
+   *  encoder switches to a two-input command and adds AAC audio at 128
+   *  kbps. The audio must already be written to MEMFS as `audio.wav`
+   *  before calling encodeFrames. */
+  withAudio?: boolean;
 }
 
 /**
@@ -71,22 +76,34 @@ export async function encodeFrames(frameCount: number, opts: EncodeOptions): Pro
   }
 
   try {
-    await ff.exec([
+    const args = [
       '-framerate', String(opts.fps),
       '-i', 'f%05d.jpg',
+    ];
+    if (opts.withAudio) {
+      args.push('-i', 'audio.wav');
+    }
+    args.push(
       '-c:v', 'libx264',
       '-pix_fmt', 'yuv420p',
       '-preset', 'veryfast',
       '-crf', '20',
-      '-movflags', '+faststart',
-      'out.mp4',
-    ]);
+    );
+    if (opts.withAudio) {
+      // AAC stereo at 128 kbps — wide compatibility. `-shortest` clips
+      // to the video duration when the audio track is longer (e.g. a
+      // music loop overshooting the last move).
+      args.push('-c:a', 'aac', '-b:a', '128k', '-shortest');
+    }
+    args.push('-movflags', '+faststart', 'out.mp4');
+    await ff.exec(args);
 
     const data = await ff.readFile('out.mp4');
     if (typeof data === 'string') throw new Error('ffmpeg returned text, expected binary');
 
     // Cleanup MEMFS so a second export doesn't accumulate frames.
     await ff.deleteFile('out.mp4').catch(() => {});
+    if (opts.withAudio) await ff.deleteFile('audio.wav').catch(() => {});
     for (let i = 0; i < frameCount; i++) {
       const name = `f${String(i).padStart(5, '0')}.jpg`;
       await ff.deleteFile(name).catch(() => {});

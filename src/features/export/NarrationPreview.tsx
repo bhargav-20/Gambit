@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useGameStore } from '@/core/store/gameStore';
 import { useUiStore } from '@/core/store/uiStore';
+import { useNarrationStore } from '@/core/store/narrationStore';
 import { findOpening } from '@/features/openings/catalog';
 import { findGame } from '@/features/games/catalog';
 import { generateNarration } from './narration';
@@ -74,10 +75,12 @@ export function NarrationPreview() {
     return () => window.speechSynthesis?.removeEventListener('voiceschanged', load);
   }, []);
 
-  // ----- Unified picker: kind + id -----
-  type VoiceKind = 'os' | 'neural';
-  const [voiceKind, setVoiceKind] = useState<VoiceKind>('os');
-  const [voiceId, setVoiceId] = useState<string>(''); // OS voiceURI or kokoro id
+  // ----- Unified picker (config lives in narrationStore so ExportPanel
+  // can also read it when wiring the Render-with-narration flow) -----
+  const voiceKind = useNarrationStore((s) => s.voiceKind);
+  const setVoiceKind = useNarrationStore((s) => s.setVoiceKind);
+  const voiceId = useNarrationStore((s) => s.voiceId);
+  const setVoiceId = useNarrationStore((s) => s.setVoiceId);
   useEffect(() => {
     if (voiceKind === 'os' && osVoices.length && !voiceId) {
       setVoiceId(osVoices[0].voiceURI);
@@ -110,12 +113,16 @@ export function NarrationPreview() {
     }
   };
 
-  // ----- Mix controls (Phase 1c) -----
-  const [voiceVolume, setVoiceVolume] = useState(1);
-  const [musicVolume, setMusicVolume] = useState(0.35);
-  const [autoDuck, setAutoDuck] = useState(true);
-  const [musicBlob, setMusicBlob] = useState<Blob | null>(null);
-  const [musicName, setMusicName] = useState<string | null>(null);
+  // ----- Mix controls (Phase 1c) — backed by narrationStore -----
+  const voiceVolume = useNarrationStore((s) => s.voiceVolume);
+  const setVoiceVolume = useNarrationStore((s) => s.setVoiceVolume);
+  const musicVolume = useNarrationStore((s) => s.musicVolume);
+  const setMusicVolume = useNarrationStore((s) => s.setMusicVolume);
+  const autoDuck = useNarrationStore((s) => s.autoDuck);
+  const setAutoDuck = useNarrationStore((s) => s.setAutoDuck);
+  const musicBlob = useNarrationStore((s) => s.musicBlob);
+  const musicName = useNarrationStore((s) => s.musicName);
+  const setMusic = useNarrationStore((s) => s.setMusic);
   const musicInputRef = useRef<HTMLInputElement>(null);
 
   // ----- Playback -----
@@ -325,7 +332,7 @@ export function NarrationPreview() {
                 <span className="text-ink truncate max-w-[140px]" title={musicName ?? 'Uploaded'}>{musicName ?? 'Uploaded'}</span>
                 <button
                   className="btn-icon h-6 w-6"
-                  onClick={() => { setMusicBlob(null); setMusicName(null); }}
+                  onClick={() => setMusic(null, null)}
                   title="Remove music"
                   aria-label="Remove music"
                 >
@@ -347,7 +354,7 @@ export function NarrationPreview() {
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) { setMusicBlob(file); setMusicName(file.name); }
+                if (file) setMusic(file, file.name);
                 e.target.value = '';
               }}
             />

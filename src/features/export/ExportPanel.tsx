@@ -1,9 +1,13 @@
 import { useState } from 'react';
 import { useGameStore } from '@/core/store/gameStore';
 import { useUiStore } from '@/core/store/uiStore';
+import { useNarrationStore } from '@/core/store/narrationStore';
 import { exportGameToVideo } from './exportVideo';
 import type { Aspect, Quality } from './exportVideo';
-import { Download, Smartphone, Monitor, Square, Video, Loader2, Zap, Gem } from 'lucide-react';
+import { generateNarration } from './narration';
+import { findOpening } from '@/features/openings/catalog';
+import { findGame } from '@/features/games/catalog';
+import { Download, Smartphone, Monitor, Square, Video, Loader2, Zap, Gem, Mic } from 'lucide-react';
 import clsx from 'clsx';
 import { NarrationPreview } from './NarrationPreview';
 
@@ -31,6 +35,15 @@ export function ExportPanel() {
   const themeId = useUiStore((s) => s.boardTheme);
   const pieceSetId = useUiStore((s) => s.pieceSet);
 
+  // Narration config (lives in narrationStore so NarrationPreview can
+  // surface and edit the same picker state).
+  const narration = useNarrationStore();
+  // Narrated export requires the neural voice (system voice can't be
+  // captured) and the high-quality ffmpeg backend.
+  const narratedExportPossible = narration.voiceKind === 'neural' && !!narration.voiceId;
+  const includeNarration = narration.exportNarration && narratedExportPossible;
+  const effectiveQuality: Quality = includeNarration ? 'high' : quality;
+
   const canExport = game.moves.length > 0;
 
   const run = async () => {
@@ -41,6 +54,23 @@ export function ExportPanel() {
     if (preview) URL.revokeObjectURL(preview.url);
     setPreview(null);
     try {
+      // Assemble the narration option lazily — we only generate the
+      // script when the user actually opts in, so loading a game doesn't
+      // spend CPU walking through the openings/games catalogs.
+      let narrationOpts: Parameters<typeof exportGameToVideo>[1]['narration'];
+      if (includeNarration) {
+        const opening = game.meta.openingId ? findOpening(game.meta.openingId) : undefined;
+        const famous = game.meta.gameId ? findGame(game.meta.gameId) : undefined;
+        const script = generateNarration({ game, opening, famousGame: famous });
+        narrationOpts = {
+          script,
+          voice: narration.voiceId,
+          music: narration.musicBlob ?? undefined,
+          voiceVolume: narration.voiceVolume,
+          musicVolume: narration.musicVolume,
+          autoDuck: narration.autoDuck,
+        };
+      }
       const res = await exportGameToVideo(game, {
         aspect,
         themeId,
@@ -48,7 +78,8 @@ export function ExportPanel() {
         orientation,
         title: game.meta.title,
         subtitle: game.meta.eco ? `ECO ${game.meta.eco}` : game.meta.description,
-        quality,
+        quality: effectiveQuality,
+        narration: narrationOpts,
         onProgress: setProgress,
       });
       const url = URL.createObjectURL(res.blob);
@@ -69,14 +100,25 @@ export function ExportPanel() {
     a.click();
   };
 
-  const isHigh = quality === 'high';
+  const isHigh = effectiveQuality === 'high';
+  // The narrated path has three phases the busy label communicates so
+  // the user knows synthesis is the slow step (not a hung process):
+  //   0..0.5  → synthesizing speech per line
+  //   0.5..0.85 → rendering frames
+  //   0.85..1.0 → ffmpeg encoding
   const busyLabel = busy
-    ? isHigh
-      ? progress < 0.7
-        ? `Rendering frames… ${Math.round((progress / 0.7) * 100)}%`
-        : `Encoding MP4… ${Math.round(((progress - 0.7) / 0.3) * 100)}%`
-      : `Rendering… ${Math.round(progress * 100)}%`
-    : 'Render video';
+    ? includeNarration
+      ? progress < 0.5
+        ? `Synthesizing speech… ${Math.round((progress / 0.5) * 100)}%`
+        : progress < 0.85
+          ? `Rendering frames… ${Math.round(((progress - 0.5) / 0.35) * 100)}%`
+          : `Encoding MP4… ${Math.round(((progress - 0.85) / 0.15) * 100)}%`
+      : isHigh
+        ? progress < 0.7
+          ? `Rendering frames… ${Math.round((progress / 0.7) * 100)}%`
+          : `Encoding MP4… ${Math.round(((progress - 0.7) / 0.3) * 100)}%`
+        : `Rendering… ${Math.round(progress * 100)}%`
+    : includeNarration ? 'Render narrated video' : 'Render video';
 
   return (
     <div className="flex flex-col gap-4 h-full">
@@ -132,13 +174,39 @@ export function ExportPanel() {
         )}
       </div>
 
-      {/* Narration preview — Phase 1a of the narrated-video roadmap. Reads
-          the auto-generated commentary aloud via SpeechSynthesis so the
-          user can hear the prose before we invest in capturing audio for
-          the actual export. SpeechSynthesis output doesn't flow through
-          Web Audio, so this stays preview-only; the export-time TTS will
-          be neural (kokoro-js or piper-tts-web) in a follow-up phase. */}
+      {/* Narration preview — Phase 1a/1b/1c. The picker + mix controls
+          live here; the Render-with-narration toggle below this component
+          shares the same config via narrationStore. */}
       <NarrationPreview />
+
+      {/* Narration export toggle. Gated to the neural-voice path:
+          SpeechSynthesis audio can't be captured, so an OS voice can
+          preview but not export. */}
+      {game.moves.length > 0 && (
+        <label className={clsx(
+          'panel-tight p-2.5 flex items-start gap-2.5 cursor-pointer transition-colors',
+          includeNarration ? 'border-accent/40 bg-accent/5' : '',
+        )}>
+          <input
+            type="checkbox"
+            className="accent-accent mt-0.5"
+            checked={narration.exportNarration}
+            onChange={(e) => narration.setExportNarration(e.target.checked)}
+            disabled={!narratedExportPossible}
+          />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 text-xs font-medium">
+              <Mic size={12} className="text-accent" />
+              Include narration in the exported video
+            </div>
+            <p className="text-[10px] text-ink-faint mt-1 leading-relaxed">
+              {narratedExportPossible
+                ? 'Forces High-quality (ffmpeg) backend. Synthesis happens before render — expect minutes of "Synthesizing speech…" for long games.'
+                : 'Pick a Neural voice above to enable. System voices can preview but their audio can\'t be captured.'}
+            </p>
+          </div>
+        </label>
+      )}
 
       <button
         className="btn-primary"
