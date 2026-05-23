@@ -5,7 +5,8 @@ import { findGame } from '@/features/games/catalog';
 import { generateNarration } from './narration';
 import { synthesize, getKokoro, isKokoroLoaded, KOKORO_PICKER } from './tts/kokoroTts';
 import type { PickerVoice } from './tts/kokoroTts';
-import { Mic, Play, Square as StopIcon, ChevronDown, Sparkles, Loader2 } from 'lucide-react';
+import { AudioMixer } from './audio/AudioMixer';
+import { Mic, Play, Square as StopIcon, ChevronDown, Sparkles, Loader2, Music, Upload, X } from 'lucide-react';
 import clsx from 'clsx';
 
 /**
@@ -46,7 +47,20 @@ export function NarrationPreview() {
   useEffect(() => {
     const load = () => {
       const list = window.speechSynthesis?.getVoices() ?? [];
-      const sorted = [...list].sort((a, b) => {
+      // macOS exposes multiple SpeechSynthesisVoice entries that share the
+      // same `voiceURI` (e.g. Samantha at multiple sample rates, the
+      // "premium" tier alongside the default). Without deduping, the
+      // <option key={voiceURI}> renders trip React's "duplicate keys" warning
+      // and the picker can only ever select the first one anyway. Keep the
+      // first occurrence per URI; the OS already orders them with the
+      // preferred voice first.
+      const seen = new Set<string>();
+      const unique = list.filter((v) => {
+        if (seen.has(v.voiceURI)) return false;
+        seen.add(v.voiceURI);
+        return true;
+      });
+      const sorted = unique.sort((a, b) => {
         const aEn = a.lang?.startsWith('en') ? 0 : 1;
         const bEn = b.lang?.startsWith('en') ? 0 : 1;
         if (aEn !== bEn) return aEn - bEn;
@@ -95,37 +109,74 @@ export function NarrationPreview() {
     }
   };
 
+  // ----- Mix controls (Phase 1c) -----
+  const [voiceVolume, setVoiceVolume] = useState(1);
+  const [musicVolume, setMusicVolume] = useState(0.35);
+  const [autoDuck, setAutoDuck] = useState(true);
+  const [musicBlob, setMusicBlob] = useState<Blob | null>(null);
+  const [musicName, setMusicName] = useState<string | null>(null);
+  const musicInputRef = useRef<HTMLInputElement>(null);
+
   // ----- Playback -----
   const [playing, setPlaying] = useState(false);
   const [currentLineIdx, setCurrentLineIdx] = useState<number>(-1);
   const runIdRef = useRef(0);
-  // A persistent AudioContext for kokoro playback. Created lazily on
-  // first neural play so we don't spin one up for users who never opt in.
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  // Audio mixer wraps the Web Audio graph. Created lazily on first play
+  // so we don't spin one up for users who never preview. We rebuild it
+  // each play() so a previously-closed context (e.g. after a long idle
+  // period) doesn't haunt us — the cost is negligible.
+  const mixerRef = useRef<AudioMixer | null>(null);
+  // Whether the mixer needs the latest music blob loaded into it. Set
+  // true on any control change that the mixer can't see (e.g. swapping
+  // the music file); play() re-syncs before starting.
+  const musicDirtyRef = useRef(true);
+
+  // Push slider/toggle changes into the live mixer if one's running.
+  useEffect(() => { mixerRef.current?.setVoiceVolume(voiceVolume); }, [voiceVolume]);
+  useEffect(() => { mixerRef.current?.setMusicVolume(musicVolume); }, [musicVolume]);
+  useEffect(() => { mixerRef.current?.setAutoDuck(autoDuck); }, [autoDuck]);
+  useEffect(() => { musicDirtyRef.current = true; }, [musicBlob]);
 
   const stop = () => {
     runIdRef.current++;
     window.speechSynthesis?.cancel();
-    if (currentSourceRef.current) {
-      try { currentSourceRef.current.stop(); } catch { /* already stopped */ }
-      currentSourceRef.current = null;
+    if (mixerRef.current) {
+      mixerRef.current.stopVoice();
+      mixerRef.current.stopMusic();
     }
     setPlaying(false);
     setCurrentLineIdx(-1);
+  };
+
+  const ensureMixer = async (): Promise<AudioMixer> => {
+    if (!mixerRef.current) {
+      mixerRef.current = new AudioMixer({
+        voiceVolume, musicVolume, autoDuck,
+      });
+      musicDirtyRef.current = true;
+    }
+    if (musicDirtyRef.current) {
+      await mixerRef.current.setMusic(musicBlob);
+      musicDirtyRef.current = false;
+    }
+    return mixerRef.current;
   };
 
   const play = async () => {
     if (voiceKind === 'neural') {
       const ok = await ensureNeuralLoaded();
       if (!ok) return;
-      if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
     } else {
       if (!window.speechSynthesis) return;
       window.speechSynthesis.cancel();
     }
+    const mixer = voiceKind === 'neural' || musicBlob ? await ensureMixer() : null;
     const runId = ++runIdRef.current;
     setPlaying(true);
+
+    // Kick off music ahead of the first voice line so the duck attack on
+    // line 1 has something to lower.
+    if (mixer && musicBlob) mixer.startMusic();
 
     const lines: Array<{ text: string; ply?: number }> = [
       { text: script.intro },
@@ -142,8 +193,8 @@ export function NarrationPreview() {
       setCurrentLineIdx(i);
       if (line.ply !== undefined) goTo(line.ply);
 
-      if (kokoroVoiceId) {
-        await speakWithKokoro(line.text, kokoroVoiceId, audioCtxRef.current!, currentSourceRef);
+      if (kokoroVoiceId && mixer) {
+        await speakWithKokoroThroughMixer(line.text, kokoroVoiceId, mixer);
       } else {
         await speakWithOs(line.text, osVoice);
       }
@@ -151,11 +202,18 @@ export function NarrationPreview() {
       if (runIdRef.current !== runId) return;
       await wait(180);
     }
+    if (mixer) mixer.stopMusic();
     setPlaying(false);
     setCurrentLineIdx(-1);
   };
 
-  useEffect(() => () => stop(), []);
+  // Cleanup the AudioContext on unmount so we don't leak.
+  useEffect(() => () => {
+    runIdRef.current++;
+    mixerRef.current?.destroy();
+    mixerRef.current = null;
+    window.speechSynthesis?.cancel();
+  }, []);
 
   if (!game.moves.length) return null;
 
@@ -241,6 +299,69 @@ export function NarrationPreview() {
         </>
       )}
 
+      {/* Background music + mix sliders. Music routes through the
+          AudioMixer's gain/duck graph so the user hears the same mix the
+          Phase 1d export pipeline will capture. */}
+      <details className="panel-tight p-2.5">
+        <summary className="text-[11px] text-ink-muted cursor-pointer select-none flex items-center gap-1.5">
+          <Music size={11} className="text-accent" />
+          Background music &amp; mix
+        </summary>
+        <div className="mt-2.5 flex flex-col gap-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] text-ink-muted">Music</span>
+            {musicBlob ? (
+              <div className="flex items-center gap-1.5 text-[11px]">
+                <span className="text-ink truncate max-w-[140px]" title={musicName ?? 'Uploaded'}>{musicName ?? 'Uploaded'}</span>
+                <button
+                  className="btn-icon h-6 w-6"
+                  onClick={() => { setMusicBlob(null); setMusicName(null); }}
+                  title="Remove music"
+                  aria-label="Remove music"
+                >
+                  <X size={10} />
+                </button>
+              </div>
+            ) : (
+              <button
+                className="btn h-7 text-[11px] gap-1.5 px-2"
+                onClick={() => musicInputRef.current?.click()}
+              >
+                <Upload size={10} /> Upload audio
+              </button>
+            )}
+            <input
+              ref={musicInputRef}
+              type="file"
+              accept="audio/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) { setMusicBlob(file); setMusicName(file.name); }
+                e.target.value = '';
+              }}
+            />
+          </div>
+
+          <VolumeSlider label="Voice"  value={voiceVolume} onChange={setVoiceVolume} />
+          <VolumeSlider label="Music"  value={musicVolume} onChange={setMusicVolume} />
+
+          <label className="flex items-center justify-between gap-2 text-[11px]">
+            <span className="text-ink-muted">Auto-duck music under voice</span>
+            <input
+              type="checkbox"
+              className="accent-accent"
+              checked={autoDuck}
+              onChange={(e) => setAutoDuck(e.target.checked)}
+            />
+          </label>
+
+          <p className="text-[10px] text-ink-faint leading-relaxed">
+            Bundled CC0 tracks (tense classical, cinematic build, upbeat puzzle) are coming. For now, upload your own — any audio file works.
+          </p>
+        </div>
+      </details>
+
       <div className="grid grid-cols-2 gap-1.5">
         <button
           className="btn h-8 text-xs justify-center gap-1.5"
@@ -302,6 +423,26 @@ function KindButton({
   );
 }
 
+function VolumeSlider({
+  label, value, onChange,
+}: { label: string; value: number; onChange: (v: number) => void }) {
+  return (
+    <label className="flex items-center gap-2 text-[11px]">
+      <span className="text-ink-muted w-12 shrink-0">{label}</span>
+      <input
+        type="range"
+        min={0}
+        max={1}
+        step={0.01}
+        value={value}
+        onChange={(e) => onChange(parseFloat(e.target.value))}
+        className="flex-1 accent-accent"
+      />
+      <span className="text-ink-faint w-8 text-right tabular-nums">{Math.round(value * 100)}%</span>
+    </label>
+  );
+}
+
 function ScriptLine({ text, active }: { text: string; active: boolean }) {
   return (
     <p className={clsx(
@@ -324,34 +465,19 @@ function speakWithOs(text: string, voice?: SpeechSynthesisVoice): Promise<void> 
   });
 }
 
-async function speakWithKokoro(
+async function speakWithKokoroThroughMixer(
   text: string,
   voiceId: string,
-  ctx: AudioContext,
-  sourceRef: React.MutableRefObject<AudioBufferSourceNode | null>,
+  mixer: AudioMixer,
 ): Promise<void> {
-  // Synthesize the audio buffer. This blocks the worker thread the model
-  // runs on, not the UI thread — but the await is still long-ish on
-  // sentence-length inputs (a few hundred ms to a few seconds).
   const { samples, sampleRate } = await synthesize(text, { voice: voiceId });
-  // Build a Web Audio buffer matching kokoro's output format. Copy through
-  // a fresh Float32Array — kokoro returns Float32Array<ArrayBufferLike>
+  // Copy through a fresh Float32Array — kokoro returns ArrayBufferLike
   // which TS 5.7+'s narrower lib.dom rejects for copyToChannel.
   const channel = new Float32Array(samples.length);
   channel.set(samples);
-  const buffer = ctx.createBuffer(1, channel.length, sampleRate);
+  const buffer = mixer.ctx.createBuffer(1, channel.length, sampleRate);
   buffer.copyToChannel(channel, 0);
-  const src = ctx.createBufferSource();
-  src.buffer = buffer;
-  src.connect(ctx.destination);
-  sourceRef.current = src;
-  return new Promise((resolve) => {
-    src.onended = () => {
-      if (sourceRef.current === src) sourceRef.current = null;
-      resolve();
-    };
-    src.start();
-  });
+  return mixer.playVoice(buffer);
 }
 
 function wait(ms: number): Promise<void> {
