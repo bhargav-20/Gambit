@@ -121,19 +121,15 @@ function composeMoveLine(
   const curated = famous?.moveNotes?.[zeroIndexedPly] ?? opening?.moveNotes?.[zeroIndexedPly];
   const mechanical = sanToEnglish(mv, zeroIndexedPly);
   if (curated && curated.trim()) {
-    // Prepend a short move identifier so the listener still hears the
-    // SAN context, then let the curated note carry the meaning.
-    return `${moveNumber(zeroIndexedPly)}. ${curated}`;
+    // Prefix the curated note with just the side identifier. The board
+    // is advancing visually under the narration, so the move-number
+    // context is redundant — the listener can see which move is on
+    // screen. Curated notes rarely state the side themselves, so the
+    // "White." / "Black." cue still anchors the listener.
+    const side = zeroIndexedPly % 2 === 0 ? 'White' : 'Black';
+    return `${side}. ${curated}`;
   }
   return mechanical;
-}
-
-function moveNumber(zeroIndexedPly: number): string {
-  // ply 0 (white's 1st) → "Move 1, White"
-  // ply 1 (black's 1st) → "Move 1, Black"
-  const fullMove = Math.floor(zeroIndexedPly / 2) + 1;
-  const side = zeroIndexedPly % 2 === 0 ? 'White' : 'Black';
-  return `Move ${fullMove}, ${side}`;
 }
 
 /**
@@ -149,10 +145,10 @@ function sanToEnglish(mv: MoveStep, zeroIndexedPly: number): string {
 
   // Castling — both notations.
   if (san.startsWith('O-O-O')) {
-    return `${moveNumber(zeroIndexedPly)}. ${side} castles queenside${suffix(san)}.`;
+    return `${side} castles queenside${suffix(san)}.`;
   }
   if (san.startsWith('O-O')) {
-    return `${moveNumber(zeroIndexedPly)}. ${side} castles kingside${suffix(san)}.`;
+    return `${side} castles kingside${suffix(san)}.`;
   }
 
   // Promotion — `e8=Q+`, `bxa1=N#` etc.
@@ -164,30 +160,30 @@ function sanToEnglish(mv: MoveStep, zeroIndexedPly: number): string {
   // capture is the `x`, the destination is the 2-char square after it.
   const pawnCap = san.match(/^([a-h])x([a-h][1-8])/);
   if (pawnCap) {
-    return `${moveNumber(zeroIndexedPly)}. ${side}'s ${pawnCap[1]}-pawn takes on ${pawnCap[2]}${promotionText}${suffix(san)}.`;
+    return `${side}'s ${pawnCap[1]}-pawn takes on ${pawnCap[2]}${promotionText}${suffix(san)}.`;
   }
 
   // Piece capture — `Nxe5`, `Bxh7+`, `Qxd5`. May have disambiguation:
   // `Nbxd5`, `R1xa5`, `Nf3xd4`.
   const pieceCap = san.match(/^([KQRBN])([a-h]?[1-8]?)x([a-h][1-8])/);
   if (pieceCap) {
-    return `${moveNumber(zeroIndexedPly)}. ${side}'s ${pieceName(pieceCap[1])} takes on ${pieceCap[3]}${suffix(san)}.`;
+    return `${side}'s ${pieceName(pieceCap[1])} takes on ${pieceCap[3]}${suffix(san)}.`;
   }
 
   // Piece move (no capture) — `Nf3`, `Qd2`, with possible disambiguation.
   const pieceMove = san.match(/^([KQRBN])([a-h]?[1-8]?)([a-h][1-8])/);
   if (pieceMove) {
-    return `${moveNumber(zeroIndexedPly)}. ${side} plays ${pieceName(pieceMove[1])} to ${pieceMove[3]}${suffix(san)}.`;
+    return `${side} plays ${pieceName(pieceMove[1])} to ${pieceMove[3]}${suffix(san)}.`;
   }
 
   // Simple pawn push — `e4`, `d5`, possibly with promotion `e8=Q`.
   const pawnPush = san.match(/^([a-h])(\d)/);
   if (pawnPush) {
-    return `${moveNumber(zeroIndexedPly)}. ${side} plays pawn to ${pawnPush[1]}${pawnPush[2]}${promotionText}${suffix(san)}.`;
+    return `${side} plays pawn to ${pawnPush[1]}${pawnPush[2]}${promotionText}${suffix(san)}.`;
   }
 
   // Fall through — read the SAN literally rather than producing nothing.
-  return `${moveNumber(zeroIndexedPly)}. ${side} plays ${san}.`;
+  return `${side} plays ${san}.`;
 }
 
 function pieceName(letter: string): string {

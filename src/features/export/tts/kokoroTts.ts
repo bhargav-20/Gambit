@@ -24,6 +24,25 @@ const DEFAULT_DTYPE: 'q8' = 'q8';
 
 let cached: KokoroTTS | null = null;
 let loading: Promise<KokoroTTS> | null = null;
+let usingDevice: 'webgpu' | 'wasm' | 'unknown' = 'unknown';
+
+/**
+ * Detect whether the current browser exposes a working WebGPU adapter.
+ * Just having `navigator.gpu` defined isn't enough — Firefox stubs it but
+ * doesn't actually request adapters successfully. We probe by asking for
+ * an adapter and only commit to webgpu if one comes back.
+ */
+async function detectWebGPU(): Promise<boolean> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const nav = navigator as any;
+  if (!nav.gpu) return false;
+  try {
+    const adapter = await nav.gpu.requestAdapter();
+    return !!adapter;
+  } catch {
+    return false;
+  }
+}
 
 export interface LoadOptions {
   /** Optional progress callback. Receives 0..1 values as the model
@@ -45,18 +64,39 @@ export async function getKokoro(opts: LoadOptions = {}): Promise<KokoroTTS> {
 
   loading = (async () => {
     const { KokoroTTS } = await import('kokoro-js');
-    const tts = await KokoroTTS.from_pretrained(MODEL_ID, {
-      dtype: DEFAULT_DTYPE,
-      // Transformers.js fires progress events for each shard download. We
-      // only care about the aggregate progress, so the most useful field
-      // is `progress` (0..100 inclusive); guard for the other event shapes
-      // (initiate / ready) that don't carry a numeric percentage.
-      progress_callback: (info: { status: string; progress?: number }) => {
-        if (typeof info.progress === 'number') {
-          opts.onProgress?.(Math.max(0, Math.min(1, info.progress / 100)));
-        }
-      },
-    });
+    // WebGPU is 5–10× faster than WASM on capable hardware. Probe first and
+    // fall back to WASM if either the browser lacks an adapter (Firefox,
+    // older Safari) or the model load with webgpu throws (some Linux/Intel
+    // combos accept the adapter but fail at runtime).
+    const wantsGPU = await detectWebGPU();
+    let tts: KokoroTTS | null = null;
+    const progress_callback = (info: { status: string; progress?: number }) => {
+      if (typeof info.progress === 'number') {
+        opts.onProgress?.(Math.max(0, Math.min(1, info.progress / 100)));
+      }
+    };
+    if (wantsGPU) {
+      try {
+        tts = await KokoroTTS.from_pretrained(MODEL_ID, {
+          dtype: DEFAULT_DTYPE,
+          device: 'webgpu',
+          progress_callback,
+        });
+        usingDevice = 'webgpu';
+      } catch {
+        // Webgpu init failed mid-load — fall through to the WASM path so
+        // the user still gets neural TTS rather than a hard error.
+        tts = null;
+      }
+    }
+    if (!tts) {
+      tts = await KokoroTTS.from_pretrained(MODEL_ID, {
+        dtype: DEFAULT_DTYPE,
+        device: 'wasm',
+        progress_callback,
+      });
+      usingDevice = 'wasm';
+    }
     cached = tts;
     loading = null;
     return tts;
@@ -129,4 +169,11 @@ export const KOKORO_PICKER: PickerVoice[] = [
 /** Is kokoro already loaded (no download needed)? */
 export function isKokoroLoaded(): boolean {
   return cached !== null;
+}
+
+/** Which device kokoro is currently running on. Useful for UI hints — a
+ *  "running on WebGPU" badge reassures users seeing fast synthesis that
+ *  they're on the fast path. */
+export function kokoroDevice(): 'webgpu' | 'wasm' | 'unknown' {
+  return usingDevice;
 }

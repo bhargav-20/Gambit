@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useGameStore } from '@/core/store/gameStore';
+import { useUiStore } from '@/core/store/uiStore';
 import { findOpening } from '@/features/openings/catalog';
 import { findGame } from '@/features/games/catalog';
 import { generateNarration } from './narration';
@@ -214,6 +215,15 @@ export function NarrationPreview() {
     mixerRef.current = null;
     window.speechSynthesis?.cancel();
   }, []);
+
+  // The Share modal keeps NarrationPreview mounted while it fades out, so
+  // the unmount cleanup above doesn't fire on modal close. Subscribe to
+  // shareOpen and stop the active narration when it flips false.
+  const shareOpen = useUiStore((s) => s.shareOpen);
+  useEffect(() => {
+    if (!shareOpen) stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shareOpen]);
 
   if (!game.moves.length) return null;
 
