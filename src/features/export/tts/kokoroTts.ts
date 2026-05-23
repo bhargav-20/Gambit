@@ -20,17 +20,35 @@ import type { KokoroTTS } from 'kokoro-js';
  */
 
 const MODEL_ID = 'onnx-community/Kokoro-82M-v1.0-ONNX';
-const DEFAULT_DTYPE: 'q8' = 'q8';
+
+// Two configs we ship, in priority order:
+//   1. webgpu + fp32 — fastest synthesis (~1 s/sentence) when the user's
+//      browser has a working WebGPU adapter. Pays a bigger one-time
+//      download (~80 MB instead of 20 MB) but it's cached afterward.
+//   2. wasm + q8     — universally correct fallback. ~3× slower but only
+//      ~20 MB, runs on every browser including Safari + Firefox.
+//
+// We tried `webgpu + q8` as the "best of both worlds" — it's broken.
+// The kokoro-82M model at q8, run through Transformers.js's WebGPU EP
+// on certain adapters, produces Chinese-sounding audio for English IPA
+// input. Verified on macOS 2026-05-23 (the phonemes go in correct, the
+// speaker comes out wrong-language). Keep this combo out of the
+// candidate list until a future kokoro release fixes it.
+type DType = 'fp32' | 'q8';
+const CANDIDATES: ReadonlyArray<{ device: 'webgpu' | 'wasm'; dtype: DType }> = [
+  { device: 'webgpu', dtype: 'fp32' },
+  { device: 'wasm',   dtype: 'q8'   },
+];
 
 let cached: KokoroTTS | null = null;
 let loading: Promise<KokoroTTS> | null = null;
 let usingDevice: 'webgpu' | 'wasm' | 'unknown' = 'unknown';
 
 /**
- * Detect whether the current browser exposes a working WebGPU adapter.
- * Just having `navigator.gpu` defined isn't enough — Firefox stubs it but
- * doesn't actually request adapters successfully. We probe by asking for
- * an adapter and only commit to webgpu if one comes back.
+ * Probe whether the current browser exposes a working WebGPU adapter.
+ * Just having `navigator.gpu` defined isn't enough — Firefox stubs it
+ * but the adapter request fails. We commit to webgpu only if an adapter
+ * actually comes back.
  */
 async function detectWebGPU(): Promise<boolean> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -64,38 +82,34 @@ export async function getKokoro(opts: LoadOptions = {}): Promise<KokoroTTS> {
 
   loading = (async () => {
     const { KokoroTTS } = await import('kokoro-js');
-    // WebGPU is 5–10× faster than WASM on capable hardware. Probe first and
-    // fall back to WASM if either the browser lacks an adapter (Firefox,
-    // older Safari) or the model load with webgpu throws (some Linux/Intel
-    // combos accept the adapter but fail at runtime).
-    const wantsGPU = await detectWebGPU();
-    let tts: KokoroTTS | null = null;
     const progress_callback = (info: { status: string; progress?: number }) => {
       if (typeof info.progress === 'number') {
         opts.onProgress?.(Math.max(0, Math.min(1, info.progress / 100)));
       }
     };
-    if (wantsGPU) {
+    const hasGPU = await detectWebGPU();
+    let tts: KokoroTTS | null = null;
+    let lastError: unknown = null;
+    for (const cand of CANDIDATES) {
+      if (cand.device === 'webgpu' && !hasGPU) continue;
       try {
         tts = await KokoroTTS.from_pretrained(MODEL_ID, {
-          dtype: DEFAULT_DTYPE,
-          device: 'webgpu',
+          dtype: cand.dtype,
+          device: cand.device,
           progress_callback,
         });
-        usingDevice = 'webgpu';
-      } catch {
-        // Webgpu init failed mid-load — fall through to the WASM path so
-        // the user still gets neural TTS rather than a hard error.
-        tts = null;
+        usingDevice = cand.device;
+        break;
+      } catch (e) {
+        lastError = e;
+        // Try the next candidate. WebGPU init can fail mid-load on some
+        // hardware that nevertheless claimed an adapter.
+        continue;
       }
     }
     if (!tts) {
-      tts = await KokoroTTS.from_pretrained(MODEL_ID, {
-        dtype: DEFAULT_DTYPE,
-        device: 'wasm',
-        progress_callback,
-      });
-      usingDevice = 'wasm';
+      loading = null;
+      throw lastError ?? new Error('Failed to initialize kokoro on any backend');
     }
     cached = tts;
     loading = null;

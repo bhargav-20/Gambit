@@ -252,7 +252,7 @@ export function NarrationPreview() {
           active={voiceKind === 'neural'}
           onClick={() => { setVoiceKind('neural'); setVoiceId(''); }}
           label="Neural voice"
-          badge={neuralReady ? undefined : '~20 MB'}
+          badge={neuralReady ? undefined : '~80 MB'}
           icon={<Sparkles size={11} />}
         />
       </div>
@@ -296,7 +296,7 @@ export function NarrationPreview() {
           </label>
           {!neuralReady && !neuralLoading && (
             <p className="text-[10px] text-ink-faint leading-relaxed">
-              First use downloads ~20 MB of voice weights from Hugging Face. Cached for offline reuse after.
+              First use downloads ~80 MB of voice weights from Hugging Face (smaller fallback used when WebGPU isn&apos;t available). Cached for offline reuse after.
             </p>
           )}
           {neuralLoading && (
