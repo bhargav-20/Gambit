@@ -265,6 +265,9 @@ async function exportViaFfmpeg(
   });
   onProgress?.(1);
 
-  const blob = new Blob([data], { type: 'video/mp4' });
+  // Wrap data in a fresh Uint8Array so the underlying buffer is guaranteed
+  // to be an ArrayBuffer (not a SharedArrayBuffer). The narrower lib.dom
+  // BlobPart type (TS 5.7+) rejects Uint8Array<ArrayBufferLike> otherwise.
+  const blob = new Blob([new Uint8Array(data)], { type: 'video/mp4' });
   return { blob, mime: 'video/mp4', extension: 'mp4', durationMs: totalMs };
 }

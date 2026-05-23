@@ -284,7 +284,11 @@ export function Board2D({ maxSize }: Props) {
       ? useSetupStore.getState().toFen()
       : useGameStore.getState().currentFen();
     const last = inSetup ? undefined : useGameStore.getState().lastMoveSquares();
-    const tc = inSetup ? setupSide : turnColor(fen);
+    // chessground expects the long color names; setupStore uses FEN-style
+    // single letters. Translate at the boundary.
+    const tc = inSetup
+      ? (setupSide === 'w' ? 'white' : 'black')
+      : turnColor(fen);
     // PvP gating: only when it's our turn AND the game hasn't ended.
     const movableColor =
       inSetup
