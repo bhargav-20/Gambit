@@ -19,6 +19,7 @@
     "framer-motion": "^12.39.0",
     "idb": "^8.0.3",
     "jsqr": "^1.4.0",
+    "kokoro-js": "^1.2.1",
     "lucide-react": "^1.16.0",
     "lz-string": "^1.5.0",
     "qrcode": "^1.5.4",
