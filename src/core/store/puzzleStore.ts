@@ -128,7 +128,7 @@ export const usePuzzleStore = create<PuzzleState>()(
       },
     }),
     {
-      name: 'gambit:puzzles',
+      name: 'shatran:puzzles',
       partialize: (s) => ({
         solvedCount: s.solvedCount,
         attemptedCount: s.attemptedCount,

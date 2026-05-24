@@ -45,10 +45,10 @@ export function ThemeStyles() {
   }, [theme, pieceSet, bg]);
 
   useEffect(() => {
-    let el = document.getElementById('gambit-board-theme') as HTMLStyleElement | null;
+    let el = document.getElementById('shatran-board-theme') as HTMLStyleElement | null;
     if (!el) {
       el = document.createElement('style');
-      el.id = 'gambit-board-theme';
+      el.id = 'shatran-board-theme';
       document.head.appendChild(el);
     }
     el.textContent = css;

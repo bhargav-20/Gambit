@@ -64,7 +64,7 @@ export const useBotStore = create<BotState>()(
       reset: () => set({ playerColor: null, thinking: false, result: null, endReason: null }),
     }),
     {
-      name: 'gambit:bot',
+      name: 'shatran:bot',
       partialize: (s) => ({
         difficulty: s.difficulty,
         preferredColor: s.preferredColor,

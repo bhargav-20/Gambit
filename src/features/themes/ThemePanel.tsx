@@ -169,7 +169,7 @@ function InstallRow() {
           }}
           className="text-sm font-medium px-3 py-1.5 rounded-md bg-accent text-bg hover:bg-accent/90 transition-colors shrink-0"
         >
-          Install Gambit
+          Install Shatran
         </button>
         <p className="text-[11px] text-ink-faint leading-tight pt-1">
           Adds an app icon to your home screen. Works offline once installed.

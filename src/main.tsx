@@ -16,7 +16,7 @@ startPwa();
 // In dev only, expose the Zustand stores so a developer can poke at state
 // from the browser console. Stripped from production builds.
 if (import.meta.env.DEV) {
-  (window as unknown as { __gambit: unknown }).__gambit = {
+  (window as unknown as { __shatran: unknown }).__shatran = {
     game: useGameStore,
     ui: useUiStore,
     puzzles: usePuzzleStore,

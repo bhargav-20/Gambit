@@ -41,7 +41,7 @@ export function TopBar() {
           <Crown size={16} className="text-accent" />
         </div>
         <div className="hidden sm:block">
-          <div className="font-display text-base leading-none group-hover:text-accent transition-colors">Gambit</div>
+          <div className="font-display text-base leading-none group-hover:text-accent transition-colors">Shatran</div>
           <div className="text-[9px] uppercase tracking-widest text-ink-faint">Chess Visualizer</div>
         </div>
       </Link>

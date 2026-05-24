@@ -9,7 +9,7 @@ export default defineConfig({
   // injection and `import.meta.env.BASE_URL`, which the Stockfish loader
   // reads — so don't change one without the other. The PWA manifest's
   // start_url and scope below also need the same prefix.
-  base: '/Gambit/',
+  base: '/Shatran/',
   plugins: [
     react(),
     VitePWA({
@@ -18,13 +18,13 @@ export default defineConfig({
       registerType: 'prompt',
       includeAssets: ['favicon.svg'],
       manifest: {
-        id: '/Gambit/',
-        name: 'Gambit — Chess Visualizer',
-        short_name: 'Gambit',
+        id: '/Shatran/',
+        name: 'Shatran — Chess Visualizer',
+        short_name: 'Shatran',
         description:
           'Openings, puzzles, famous games, PvP, position editor, analysis, and video export — fully client-side.',
-        start_url: '/Gambit/',
-        scope: '/Gambit/',
+        start_url: '/Shatran/',
+        scope: '/Shatran/',
         display: 'standalone',
         background_color: '#0b0d12',
         theme_color: '#0b0d12',
@@ -60,28 +60,29 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
         // HashRouter means every route serves the same shell — perfect for
         // a single-page navigation fallback.
-        navigateFallback: '/Gambit/index.html',
+        navigateFallback: '/Shatran/index.html',
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
             // ffmpeg core (~31 MB) — cache on first use, keep forever-ish.
             urlPattern: ({ url, sameOrigin }) =>
-              sameOrigin && url.pathname.startsWith('/Gambit/ffmpeg/'),
+              sameOrigin && url.pathname.startsWith('/Shatran/ffmpeg/'),
             handler: 'CacheFirst',
             options: {
-              cacheName: 'gambit-ffmpeg',
+              cacheName: 'shatran-ffmpeg',
               cacheableResponse: { statuses: [0, 200] },
               expiration: { maxAgeSeconds: 60 * 60 * 24 * 90 },
             },
           },
           {
             // Kokoro's JS bundle + the ONNX runtime WASM it depends on —
-            // both hashed under /Gambit/assets/. Cache on first narration.
+            // both hashed under /Shatran/assets/. Cache on first narration.
+            // (Inline match below keeps `/assets/...` agnostic of base path.)
             urlPattern: ({ url, sameOrigin }) =>
               sameOrigin && /\/assets\/(ort-wasm-|kokoro-)/.test(url.pathname),
             handler: 'CacheFirst',
             options: {
-              cacheName: 'gambit-kokoro-runtime',
+              cacheName: 'shatran-kokoro-runtime',
               cacheableResponse: { statuses: [0, 200] },
               expiration: { maxAgeSeconds: 60 * 60 * 24 * 365 },
             },
@@ -91,7 +92,7 @@ export default defineConfig({
             urlPattern: /^https:\/\/huggingface\.co\//,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'gambit-kokoro-model',
+              cacheName: 'shatran-kokoro-model',
               cacheableResponse: { statuses: [0, 200] },
               expiration: { maxAgeSeconds: 60 * 60 * 24 * 365 },
             },
@@ -100,14 +101,14 @@ export default defineConfig({
             // Google Fonts stylesheet — small and may rev URLs, SWR is right.
             urlPattern: /^https:\/\/fonts\.googleapis\.com\//,
             handler: 'StaleWhileRevalidate',
-            options: { cacheName: 'gambit-google-fonts-css' },
+            options: { cacheName: 'shatran-google-fonts-css' },
           },
           {
             // Google Fonts woff2 binaries — long-lived, cache-first.
             urlPattern: /^https:\/\/fonts\.gstatic\.com\//,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'gambit-google-fonts-files',
+              cacheName: 'shatran-google-fonts-files',
               cacheableResponse: { statuses: [0, 200] },
               expiration: { maxAgeSeconds: 60 * 60 * 24 * 365 },
             },

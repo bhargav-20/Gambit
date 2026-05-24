@@ -5,7 +5,7 @@ import { applyUpdate, promptInstall } from './register';
 
 /**
  * Two stacked bottom-center toasts, mounted once at AppShell level:
- *   • "Install Gambit" — appears the first time the browser fires
+ *   • "Install Shatran" — appears the first time the browser fires
  *     beforeinstallprompt, until dismissed. Permanently dismissable.
  *   • "Update ready" — appears when a new SW is waiting, until reloaded.
  *
@@ -42,7 +42,7 @@ function InstallToast({ onDismiss }: { onDismiss: () => void }) {
   return (
     <div
       role="dialog"
-      aria-label="Install Gambit"
+      aria-label="Install Shatran"
       className={clsx(
         'pointer-events-auto flex items-center gap-3 max-w-sm w-full',
         'bg-bg-panel border border-edge rounded-xl shadow-glass backdrop-blur-xl',
@@ -53,7 +53,7 @@ function InstallToast({ onDismiss }: { onDismiss: () => void }) {
         <Download size={16} />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium leading-tight">Install Gambit</div>
+        <div className="text-sm font-medium leading-tight">Install Shatran</div>
         <div className="text-[11px] text-ink-faint leading-tight mt-0.5">
           Add to your home screen — works offline.
         </div>

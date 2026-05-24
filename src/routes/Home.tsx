@@ -133,7 +133,7 @@ export function Home() {
       </section>
 
       <footer className="mt-auto pt-6 border-t border-edge text-[11px] text-ink-faint">
-        Gambit · Client-side · Shortcuts: ←/→ step · space play/pause · F flip
+        Shatran · Client-side · Shortcuts: ←/→ step · space play/pause · F flip
       </footer>
     </div>
   );

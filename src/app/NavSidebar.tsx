@@ -78,7 +78,7 @@ export function Sidebar() {
         aria-hidden={!navOpen}
       >
         <div className="flex items-center justify-between px-3 pb-2 mb-1 border-b border-edge">
-          <span className="font-display text-base">Gambit</span>
+          <span className="font-display text-base">Shatran</span>
           <button
             className="btn-icon h-8 w-8"
             onClick={() => setNavOpen(false)}

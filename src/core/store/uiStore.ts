@@ -119,7 +119,7 @@ export const useUiStore = create<UiState>()(
       setImportOpen: (v) => set({ importOpen: v }),
     }),
     {
-      name: 'gambit:ui',
+      name: 'shatran:ui',
       // Don't persist transient UI state — the mobile sheet should always start
       // closed on a fresh page load.
       partialize: (s) => ({

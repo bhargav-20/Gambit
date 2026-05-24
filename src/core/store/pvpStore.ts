@@ -276,7 +276,7 @@ export const usePvpStore = create<PvpState>()(
       },
     }),
     {
-      name: 'gambit:pvp',
+      name: 'shatran:pvp',
       // Persist only user-level prefs. A live session can't survive a reload
       // anyway because the WebRTC channel dies — gameStore.onRehydrateStorage
       // already drops mode='pvp' back to 'visualizer'.

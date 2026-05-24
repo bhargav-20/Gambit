@@ -53,7 +53,7 @@ export const usePwaStore = create<PwaState>()(
       dismissOfflineReady: () => set({ offlineReadyDismissed: true }),
     }),
     {
-      name: 'gambit-pwa',
+      name: 'shatran-pwa',
       // Only persist the dismissals — runtime flags (canInstall, needsUpdate)
       // are re-derived on every load by the SW + event listeners.
       partialize: (s) => ({

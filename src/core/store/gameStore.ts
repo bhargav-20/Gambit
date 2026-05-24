@@ -424,7 +424,7 @@ export const useGameStore = create<GameState>()(
   },
     }),
     {
-      name: 'gambit:game',
+      name: 'shatran:game',
       version: 1,
       // Persist only the data the user expects to find on reload. Skip
       // ephemeral state (active autoplay, mid-drag promotion, in-flight

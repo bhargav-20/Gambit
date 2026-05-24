@@ -30,7 +30,7 @@ export interface EvalSnapshot {
 type Listener = (snapshot: EvalSnapshot) => void;
 
 // Reads Vite's BASE_URL so the same constant works in `vite dev` (base = '/')
-// and on GitHub Pages where the app is mounted under `/Gambit/`. BASE_URL
+// and on GitHub Pages where the app is mounted under `/Shatran/`. BASE_URL
 // always ends with a slash, so no extra separator is needed.
 const STOCKFISH_PATH = `${import.meta.env.BASE_URL}stockfish/stockfish-18-lite-single.js`;
 
