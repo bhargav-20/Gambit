@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -35,7 +36,14 @@ export function BottomSheet({ open, onClose, title, children, heightVh = 0.78 }:
     return () => { document.body.style.overflow = prev; };
   }, [open]);
 
-  return (
+  // Render through a portal anchored on document.body so the `fixed`
+  // positioning escapes any ancestor that creates a containing block —
+  // ActivityLayout / `.panel` / chessground's animation layers have all
+  // shipped backdrop-filter or transform at various points, and any of
+  // those traps the BottomSheet inside their box. We hit the same root
+  // cause on the SetupRoute modal and the ImportFromImage modal earlier
+  // this session; portaling is the durable fix.
+  return createPortal(
     <div
       className={clsx(
         'fixed inset-0 z-40 lg:hidden transition-opacity',
@@ -78,6 +86,7 @@ export function BottomSheet({ open, onClose, title, children, heightVh = 0.78 }:
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

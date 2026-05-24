@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useGameStore } from '@/core/store/gameStore';
 import { usePvpStore } from '@/core/store/pvpStore';
+import { useUiStore } from '@/core/store/uiStore';
 import { closeCurrent } from '@/features/pvp/session';
 import { PvpLobby } from '@/features/pvp/PvpLobby';
 import { PvpMatchPanel } from '@/features/pvp/PvpMatchPanel';
@@ -32,6 +33,21 @@ export function PlayRoute() {
       if (m === 'pvp') useGameStore.setState({ mode: 'visualizer', editMode: false });
     };
   }, []);
+
+  // When the match concludes (resign / mate / flag / draw), pop the mobile
+  // match drawer so the user sees the EndCard without having to tap into
+  // the bottom sheet themselves. On desktop the drawer mechanism is
+  // hidden (`lg:hidden` on the BottomSheet wrapper) so the call is a
+  // no-op there — the EndCard is already visible in the right column.
+  // We open the drawer ONCE on the null → non-null transition; dismissing
+  // it afterward keeps it dismissed.
+  const previousResultRef = useRef<typeof result>(null);
+  useEffect(() => {
+    if (result !== null && previousResultRef.current === null) {
+      useUiStore.getState().setMobileSheet('match');
+    }
+    previousResultRef.current = result;
+  }, [result]);
 
   const showBoard = (channelStatus === 'connected' || result !== null) && !!localColor;
 
