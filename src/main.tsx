@@ -6,6 +6,12 @@ import App from './App.tsx'
 import { useGameStore } from './core/store/gameStore'
 import { useUiStore } from './core/store/uiStore'
 import { usePuzzleStore } from './core/store/puzzleStore'
+import { startPwa } from './features/pwa/register'
+
+// Register service worker + listen for the install prompt before render so
+// the SW can claim its scope and `beforeinstallprompt` doesn't fire into a
+// listener that hasn't been added yet.
+startPwa();
 
 // In dev only, expose the Zustand stores so a developer can poke at state
 // from the browser console. Stripped from production builds.

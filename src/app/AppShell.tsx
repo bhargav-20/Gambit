@@ -13,6 +13,7 @@ import { SettingsSlideOver } from './SettingsSlideOver';
 import { ShareModal } from './ShareModal';
 import { ImportModal } from './ImportModal';
 import { useHashLoader } from './HashLoader';
+import { PwaBanners } from '@/features/pwa/PwaBanners';
 
 /**
  * Persistent app frame. Renders the top bar and collapsible sidebar, and
@@ -117,6 +118,7 @@ export function AppShell() {
       <SettingsSlideOver open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} />
       <ImportModal open={importOpen} onClose={() => setImportOpen(false)} />
+      <PwaBanners />
     </div>
   );
 }

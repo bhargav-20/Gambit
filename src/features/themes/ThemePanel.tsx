@@ -3,8 +3,10 @@ import type { PieceSetId } from '@/core/store/uiStore';
 import { BOARD_THEMES } from './boardThemes';
 import { PIECE_SETS, findPieceSet } from './piecesets';
 import { APP_BACKGROUNDS } from './appBackgrounds';
-import { Palette, Eye, Square, Gauge, Box, Crown, Image as ImageIcon } from 'lucide-react';
+import { Palette, Eye, Square, Gauge, Box, Crown, Image as ImageIcon, Download, Check } from 'lucide-react';
 import clsx from 'clsx';
+import { usePwaStore } from '@/features/pwa/pwaStore';
+import { promptInstall } from '@/features/pwa/register';
 
 export function ThemePanel() {
   const ui = useUiStore();
@@ -123,6 +125,10 @@ export function ThemePanel() {
         </p>
       </Section>
 
+      <Section icon={<Download size={14} />} title="App">
+        <InstallRow />
+      </Section>
+
       <Section icon={<Gauge size={14} />} title="Animation">
         <div className="flex items-center gap-3">
           <input
@@ -138,6 +144,45 @@ export function ThemePanel() {
         </div>
       </Section>
     </div>
+  );
+}
+
+function InstallRow() {
+  const canInstall = usePwaStore((s) => s.canInstall);
+  const installed = usePwaStore((s) => s.installed);
+  const offlineReady = usePwaStore((s) => s.offlineReady);
+
+  if (installed) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-ink-muted">
+        <Check size={14} className="text-good" />
+        <span>Installed as app</span>
+      </div>
+    );
+  }
+  if (canInstall) {
+    return (
+      <div className="flex items-start gap-3">
+        <button
+          onClick={() => {
+            void promptInstall();
+          }}
+          className="text-sm font-medium px-3 py-1.5 rounded-md bg-accent text-bg hover:bg-accent/90 transition-colors shrink-0"
+        >
+          Install Gambit
+        </button>
+        <p className="text-[11px] text-ink-faint leading-tight pt-1">
+          Adds an app icon to your home screen. Works offline once installed.
+        </p>
+      </div>
+    );
+  }
+  return (
+    <p className="text-[11px] text-ink-faint leading-tight">
+      {offlineReady
+        ? 'Cached for offline use. To install as an app, open this page in Chrome, Edge, or Safari (Add to Home Screen).'
+        : 'Install support depends on your browser. Chrome, Edge, and Safari (Add to Home Screen) all work.'}
+    </p>
   );
 }
 
