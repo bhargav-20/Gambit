@@ -1,7 +1,7 @@
 import { useMatch } from 'react-router-dom';
 import { useUiStore } from '@/core/store/uiStore';
 import { useGameStore } from '@/core/store/gameStore';
-import { List, Lightbulb, BookOpen, Puzzle, Microscope, Swords, Trophy, Wand2 } from 'lucide-react';
+import { List, Lightbulb, BookOpen, Puzzle, Microscope, Swords, Trophy, Wand2, Bot } from 'lucide-react';
 import clsx from 'clsx';
 
 /**
@@ -40,11 +40,12 @@ export function MobileActions() {
     );
   }
 
-  if (mode === 'pvp') {
+  if (mode === 'pvp' || mode === 'play-bot') {
+    const Icon = mode === 'play-bot' ? Bot : Swords;
     return (
       <div className="lg:hidden grid grid-cols-2 gap-2">
         <Action
-          icon={<Swords size={16} />}
+          icon={<Icon size={16} />}
           label="Match"
           sub={moveCount > 0 ? `${moveCount}` : undefined}
           onClick={() => setSheet('match')}

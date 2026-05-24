@@ -8,7 +8,9 @@ import { PuzzlePanel } from '@/features/puzzles/PuzzlePanel';
 import { GamesCatalog } from '@/features/games/GamesCatalog';
 import { AnalyzePanel } from '@/features/analysis/AnalyzePanel';
 import { PvpMatchPanel } from '@/features/pvp/PvpMatchPanel';
+import { BotMatchPanel } from '@/features/bot/BotMatchPanel';
 import { SetupPanel } from '@/features/setup/SetupPanel';
+import { useGameStore } from '@/core/store/gameStore';
 
 /**
  * Mobile bottom-sheets — one per kind of overlayable surface. Only one is
@@ -25,6 +27,7 @@ import { SetupPanel } from '@/features/setup/SetupPanel';
 export function MobileDrawers() {
   const sheet = useUiStore((s) => s.mobileSheet);
   const setSheet = useUiStore((s) => s.setMobileSheet);
+  const mode = useGameStore((s) => s.mode);
   const isOpenings = useMatch('/openings/*');
   const isPuzzles = useMatch('/puzzles/*');
   const isGames = useMatch('/games/*');
@@ -62,7 +65,7 @@ export function MobileDrawers() {
         {isSetup && <SetupPanel />}
       </BottomSheet>
       <BottomSheet open={sheet === 'match'} onClose={close} title="Match" heightVh={0.7}>
-        <PvpMatchPanel />
+        {mode === 'play-bot' ? <BotMatchPanel /> : <PvpMatchPanel />}
       </BottomSheet>
     </>
   );

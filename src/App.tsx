@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import { useAnalysis } from '@/features/analysis/useAnalysis';
+import { useBot } from '@/features/bot/useBot';
 import { usePlayback, useKeyboardShortcuts } from '@/features/playback/usePlayback';
 import { AppShell } from './app/AppShell';
 import { Home } from './routes/Home';
@@ -26,6 +27,7 @@ export default function App() {
   usePlayback();
   useKeyboardShortcuts(true);
   useAnalysis();
+  useBot();
 
   return (
     <Routes>

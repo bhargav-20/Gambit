@@ -4,6 +4,7 @@ import { useUiStore } from '@/core/store/uiStore';
 import { useGameStore } from '@/core/store/gameStore';
 import { usePuzzleStore } from '@/core/store/puzzleStore';
 import { usePvpStore } from '@/core/store/pvpStore';
+import { useBotStore } from '@/core/store/botStore';
 import { closeCurrent } from '@/features/pvp/session';
 import { loadEmpty, STARTPOS } from '@/core/chess/pgn';
 import { ThemeStyles } from '@/features/themes/ThemeStyles';
@@ -74,6 +75,14 @@ export function AppShell() {
         closeCurrent();
         pvp.reset();
         if (useGameStore.getState().mode === 'pvp') useGameStore.getState().endPvp();
+      }
+      // Bot match shares /play with PvP — drop it on any route exit so the
+      // user doesn't return to a half-finished bot game that the analysis
+      // hook will then "resume" thinking on.
+      const bot = useBotStore.getState();
+      if (bot.playerColor) {
+        bot.reset();
+        if (useGameStore.getState().mode === 'play-bot') useGameStore.getState().endBot();
       }
     }
     if (!onSetupRoute && useGameStore.getState().mode === 'setup') {

@@ -29,8 +29,11 @@ export type Promotable = 'q' | 'r' | 'b' | 'n';
  *                  input is gated to the local player's color when it's
  *                  their turn. The pvpStore owns connection + clocks and
  *                  wires moves through applyMove just like every other mode.
+ *  - 'play-bot':   Local game against Stockfish at a chosen difficulty.
+ *                  botStore owns the difficulty / result; useBot drives
+ *                  the bot's replies when it's the bot's turn.
  */
-export type GameMode = 'visualizer' | 'composer' | 'analyze' | 'puzzle' | 'pvp' | 'setup';
+export type GameMode = 'visualizer' | 'composer' | 'analyze' | 'puzzle' | 'pvp' | 'play-bot' | 'setup';
 
 export interface PendingPromotion {
   from: Square;
@@ -122,6 +125,13 @@ interface GameState {
   /** Leave PvP back to visualizer. The played game stays loaded so the user
    *  can scrub through it or hit "Analyze this game". */
   endPvp: () => void;
+
+  /** Enter play-bot mode at a fresh starting position. editMode=true so the
+   *  board accepts input; Board2D + botStore.playerColor restrict input to
+   *  the player's side when it's their turn. */
+  startBot: () => void;
+  /** Leave play-bot back to visualizer. The played game stays loaded. */
+  endBot: () => void;
 }
 
 const blank: LoadedGame = loadEmpty(STARTPOS, { title: 'New game', source: 'editor' });
@@ -354,6 +364,18 @@ export const useGameStore = create<GameState>()(
 
   endPvp: () => set({ mode: 'visualizer', editMode: false, playing: false }),
 
+  startBot: () => set({
+    game: loadEmpty(STARTPOS, { title: 'Bot match', source: 'editor' }),
+    ply: 0,
+    playing: false,
+    mode: 'play-bot',
+    editMode: true,
+    analyzeSnapshot: null,
+    branchPly: null,
+  }),
+
+  endBot: () => set({ mode: 'visualizer', editMode: false, playing: false }),
+
   truncateAfterCurrent: () => {
     const { game, ply } = get();
     if (ply >= game.moves.length) return;
@@ -443,6 +465,12 @@ export const useGameStore = create<GameState>()(
         // to visualizer so the user lands on the played game instead of an
         // empty PvP shell with no opponent.
         if (state.mode === 'pvp') {
+          state.mode = 'visualizer';
+        }
+        // Same story for bot matches: botStore.playerColor isn't persisted,
+        // so a reload would land the user in 'play-bot' with no opponent
+        // wired up. Back to visualizer.
+        if (state.mode === 'play-bot') {
           state.mode = 'visualizer';
         }
         state.editMode = state.mode === 'composer' || state.mode === 'analyze';

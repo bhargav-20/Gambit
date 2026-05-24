@@ -94,6 +94,48 @@ export class StockfishEngine {
     });
   }
 
+  /**
+   * Pick a move for a bot opponent. Runs a movetime-capped search at a
+   * specific UCI Skill Level so weaker presets actually blunder. Returns
+   * the engine's `bestmove` in UCI long-algebraic (e.g. "e2e4", "e7e8q"),
+   * or null if the position has no legal moves (mate / stalemate — the
+   * caller should detect that with chess.js before calling).
+   *
+   * `skillLevel`: 0 (weakest) through 20 (full strength). Stockfish maps
+   *   this internally to a stochastic move-selection bias.
+   * `movetimeMs`: hard cap on search time. Even at Skill 20, this caps
+   *   strength on slow machines.
+   */
+  async findBestMove(
+    fen: string,
+    opts: { skillLevel: number; movetimeMs: number },
+  ): Promise<string | null> {
+    await this.init();
+    if (this.currentListener) this.send('stop');
+    this.searchId += 1;
+    const myId = this.searchId;
+    this.currentFen = fen;
+    this.currentSnapshot = freshSnapshot();
+
+    // Skill Level is sticky on the worker — set it before every search so
+    // a bot game that follows an analysis session can't inherit strength=20.
+    const skill = Math.max(0, Math.min(20, Math.floor(opts.skillLevel)));
+    this.send(`setoption name Skill Level value ${skill}`);
+    // Force the engine to honor the skill setting even when it has more
+    // time available (otherwise Skill Level only kicks in under short
+    // searches). UCI_LimitStrength is the documented switch.
+    this.send('setoption name UCI_LimitStrength value false');
+
+    return new Promise<string | null>((resolve) => {
+      this.currentListener = (snap) => {
+        if (this.searchId !== myId) return;
+        if (snap.done) resolve(snap.bestMove ?? null);
+      };
+      this.send(`position fen ${fen}`);
+      this.send(`go movetime ${Math.max(1, Math.floor(opts.movetimeMs))}`);
+    });
+  }
+
   /** Cancel any running search; the next evaluate() will start fresh. */
   stop(): void {
     if (!this.worker) return;

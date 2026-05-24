@@ -9,6 +9,7 @@ import { useUiStore } from '@/core/store/uiStore';
 import { usePuzzleStore } from '@/core/store/puzzleStore';
 import { useAnalysisStore } from '@/core/store/analysisStore';
 import { usePvpStore } from '@/core/store/pvpStore';
+import { useBotStore } from '@/core/store/botStore';
 import { useSetupStore } from '@/core/store/setupStore';
 import type { FenPiece } from '@/core/store/setupStore';
 import { sendLocalMove } from '@/features/pvp/session';
@@ -94,6 +95,9 @@ export function Board2D({ maxSize }: Props) {
   const bestMove = useAnalysisStore((s) => s.snapshot?.bestMove ?? null);
   const pvpLocalColor = usePvpStore((s) => s.localColor);
   const pvpResult = usePvpStore((s) => s.result);
+  const botPlayerColor = useBotStore((s) => s.playerColor);
+  const botResult = useBotStore((s) => s.result);
+  const botThinking = useBotStore((s) => s.thinking);
 
   // Setup-mode subscriptions. We only read these to derive the FEN that gets
   // pushed into chessground when the user is editing a position. Outside
@@ -115,15 +119,19 @@ export function Board2D({ maxSize }: Props) {
     const last = useGameStore.getState().lastMoveSquares();
     const tc0 = turnColor(fen);
     // In PvP, the board only accepts input from the local player AND only on
-    // their turn, AND not after the game has ended.
+    // their turn, AND not after the game has ended. Same shape for play-bot:
+    // gate to the player's color (the bot's reply is dispatched by useBot,
+    // never through the board input).
     const movableColor0 =
       inSetup0
         ? 'both'
         : mode === 'pvp'
           ? (pvpResult ? undefined : pvpLocalColor === tc0 ? tc0 : undefined)
-          : editMode
-            ? tc0
-            : undefined;
+          : mode === 'play-bot'
+            ? (botResult || botThinking ? undefined : botPlayerColor === tc0 ? tc0 : undefined)
+            : editMode
+              ? tc0
+              : undefined;
     const config: Config = {
       fen,
       // chessground's configure() does NOT read side-to-move from the FEN —
@@ -289,15 +297,18 @@ export function Board2D({ maxSize }: Props) {
     const tc = inSetup
       ? (setupSide === 'w' ? 'white' : 'black')
       : turnColor(fen);
-    // PvP gating: only when it's our turn AND the game hasn't ended.
+    // PvP / Bot gating: only when it's our turn AND the game hasn't ended
+    // (and, for bot mode, the bot isn't currently thinking).
     const movableColor =
       inSetup
         ? 'both'
         : mode === 'pvp'
           ? (pvpResult ? undefined : pvpLocalColor === tc ? tc : undefined)
-          : editMode
-            ? tc
-            : undefined;
+          : mode === 'play-bot'
+            ? (botResult || botThinking ? undefined : botPlayerColor === tc ? tc : undefined)
+            : editMode
+              ? tc
+              : undefined;
     dispatchingRef.current = true;
     try {
       api.set({
@@ -320,6 +331,7 @@ export function Board2D({ maxSize }: Props) {
       queueMicrotask(() => { dispatchingRef.current = false; });
     }
   }, [game, ply, editMode, showLegalDots, animationMs, mode, pvpLocalColor, pvpResult,
+      botPlayerColor, botResult, botThinking,
       setupSquares, setupSide, setupCastling, setupEp, setupHalf, setupFull]);
 
   // Sync orientation.
