@@ -75,10 +75,21 @@ export function useBot() {
 
     (async () => {
       try {
-        const uci = await engine.findBestMove(fen, {
+        let uci = await engine.findBestMove(fen, {
           skillLevel: preset.skillLevel,
           movetimeMs: preset.movetimeMs,
         });
+        // For very weak presets, occasionally substitute a random legal move.
+        // Stockfish's Skill 0 still plays ~1320 — Novice needs frequent blunders
+        // to feel like a true beginner. chess.js gives us the legal-move list.
+        if (preset.randomMoveRate && Math.random() < preset.randomMoveRate) {
+          const probe = new Chess(fen);
+          const legal = probe.moves({ verbose: true });
+          if (legal.length > 0) {
+            const pick = legal[Math.floor(Math.random() * legal.length)];
+            uci = `${pick.from}${pick.to}${pick.promotion ?? ''}`;
+          }
+        }
         // Stale — user reset or moved on (e.g., started a new match).
         if (myGen !== genRef.current) return;
         // Verify the position hasn't changed under us (defensive — the only

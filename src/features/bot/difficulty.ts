@@ -13,7 +13,7 @@
  * a typical laptop runs at maybe 1–2 MN/s, far below native speeds),
  * so treat them as a rough ladder rather than a guarantee.
  */
-export type BotDifficultyId = 'beginner' | 'intermediate' | 'advanced' | 'max';
+export type BotDifficultyId = 'novice' | 'beginner' | 'intermediate' | 'advanced' | 'max';
 
 export interface BotDifficulty {
   id: BotDifficultyId;
@@ -22,9 +22,25 @@ export interface BotDifficulty {
   approxElo: string;
   skillLevel: number;
   movetimeMs: number;
+  /**
+   * Probability (0..1) of overriding the engine's move with a uniformly
+   * random legal move. Used to push the very weakest preset below Stockfish's
+   * intrinsic floor (Skill 0 is still ~1320 ELO — true beginner play needs
+   * frequent blunders, not just suboptimal evaluation).
+   */
+  randomMoveRate?: number;
 }
 
 export const BOT_DIFFICULTIES: BotDifficulty[] = [
+  {
+    id: 'novice',
+    label: 'Novice',
+    blurb: 'Hangs pieces and misses checks. For your first games of chess.',
+    approxElo: '~500',
+    skillLevel: 0,
+    movetimeMs: 50,
+    randomMoveRate: 0.5,
+  },
   {
     id: 'beginner',
     label: 'Beginner',
