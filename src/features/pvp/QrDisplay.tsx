@@ -18,8 +18,15 @@ interface Props {
  * fallback for cases where a camera scan isn't practical. Uses error
  * correction level 'L' so the largest possible payload still fits — SDP
  * blobs run ~600–1200 chars even after compression.
+ *
+ * Size matters for scannability. Our SDP payloads land at QR version ~21
+ * (103 modules) once LZ-compressed. At the original 280 px display that's
+ * only 2.7 px per module — phone cameras can't reliably resolve it from
+ * arm's length. Default bumped to 420 px (≈ 4 px/module) which scans
+ * cleanly on every device I've tried, and the quiet-zone margin is
+ * widened from 1 to 4 to match the QR spec (some scanners refuse below 2).
  */
-export function QrDisplay({ value, size = 280, textFallback = true }: Props) {
+export function QrDisplay({ value, size = 420, textFallback = true }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [showText, setShowText] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -34,10 +41,19 @@ export function QrDisplay({ value, size = 280, textFallback = true }: Props) {
       {
         errorCorrectionLevel: 'L',
         width: size,
-        margin: 1,
-        // White-on-black to match the app's dark theme. The QR is still
-        // light-modules-on-dark which works for all modern scanners.
-        color: { dark: '#f7f4ed', light: '#1a1a1f' },
+        // 4-module quiet zone per QR spec. Some scanners (notably stock
+        // iOS Camera) silently refuse to detect QRs with a narrower
+        // border, even when the modules themselves are crisp.
+        margin: 4,
+        // Standard QR polarity: dark modules on light background. The
+        // earlier "light modules on dark" matched the app's dark theme
+        // but is non-standard — jsQR with `dontInvert` (the fast path
+        // we want on phone cameras) can't detect inverted QRs at all,
+        // and many third-party scanners (iOS Camera, Google Lens) also
+        // assume the standard polarity. The card around the canvas is
+        // already dark themed so the white QR sits inside a styled
+        // frame; it reads as intentional rather than off-brand.
+        color: { dark: '#1a1a1f', light: '#ffffff' },
       },
       (err) => {
         if (err) setError(err.message);

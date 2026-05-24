@@ -81,10 +81,13 @@ export function QrScanner({ onResult, hint }: Props) {
       const w = video.videoWidth;
       const h = video.videoHeight;
       if (w > 0 && h > 0) {
-        // Downscale to ~480 px on the long edge — jsQR is plenty accurate at
-        // that resolution and it cuts per-frame CPU significantly so the
-        // scanner stays responsive on phones.
-        const scale = Math.min(1, 480 / Math.max(w, h));
+        // Downscale to ~720 px on the long edge. We previously used 480
+        // which is fine for low-density QRs but our SDP payloads produce
+        // ~103-module (v21) QRs — when the camera doesn't fill its frame
+        // with the QR, each module ends up at ~2 px in the downscaled
+        // image, below jsQR's reliability floor. 720 gives us roughly
+        // 1.5× the per-module pixel count for a marginal CPU cost.
+        const scale = Math.min(1, 720 / Math.max(w, h));
         const sw = Math.round(w * scale);
         const sh = Math.round(h * scale);
         if (canvas.width !== sw) canvas.width = sw;
@@ -93,7 +96,12 @@ export function QrScanner({ onResult, hint }: Props) {
         if (ctx) {
           ctx.drawImage(video, 0, 0, sw, sh);
           const data = ctx.getImageData(0, 0, sw, sh);
-          const code = jsQR(data.data, sw, sh, { inversionAttempts: 'dontInvert' });
+          // attemptBoth is ~2× the per-frame cost of dontInvert, but
+          // it lets us scan QRs of either polarity (dark-on-light or
+          // light-on-dark). Cheap insurance against regressions like
+          // the dark-theme QR colors we previously shipped — jsQR with
+          // dontInvert silently failed to detect those at any size.
+          const code = jsQR(data.data, sw, sh, { inversionAttempts: 'attemptBoth' });
           if (code?.data) {
             stopStream();
             onResult(code.data);
@@ -124,7 +132,7 @@ export function QrScanner({ onResult, hint }: Props) {
   return (
     <div className="flex flex-col gap-3">
       <div
-        className="relative aspect-square w-full max-w-[280px] mx-auto rounded-xl overflow-hidden bg-bg-raised border border-edge"
+        className="relative aspect-square w-full max-w-[420px] mx-auto rounded-xl overflow-hidden bg-bg-raised border border-edge"
       >
         <video
           ref={videoRef}
