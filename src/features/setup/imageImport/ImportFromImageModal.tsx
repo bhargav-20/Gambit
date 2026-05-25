@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Upload, ImagePlus, Loader2, Wand2, AlertTriangle, ArrowRight } from 'lucide-react';
+import { X, Upload, ImagePlus, Loader2, Wand2, AlertTriangle, ArrowRight, FlipVertical, RotateCcw } from 'lucide-react';
 import clsx from 'clsx';
 import { useSetupStore } from '@/core/store/setupStore';
+import type { FenPiece } from '@/core/store/setupStore';
 import { detectBoardQuad } from './detect';
-import { classifyBoard, gridToFenPiecePart, preloadTemplates } from './classify';
-import type { BoardQuad, ClassificationResult, Point } from './types';
+import { classifyBoard, gridToFenPiecePart, preloadTemplates, flip180 } from './classify';
+import type { BoardQuad, ClassificationResult, DetectedGrid, Point } from './types';
 
 interface Props {
   open: boolean;
@@ -40,6 +41,22 @@ export function ImportFromImageModal({ open, onClose }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState<keyof BoardQuad | null>(null);
+  /**
+   * Per-square user overrides layered on top of the classifier output.
+   * Keyed `"${rank}-${file}"` in IMAGE-ALIGNED coordinates (the same coords
+   * the displayed grid uses). Value is a FenPiece, or null for explicit
+   * empty. Cleared on re-classify (corner drag) since that changes which
+   * physical square each cell sees.
+   */
+  const [overrides, setOverrides] = useState<Record<string, FenPiece | null>>({});
+  /** Which cell's picker is currently open (null = none). */
+  const [pickerCell, setPickerCell] = useState<{ r: number; f: number } | null>(null);
+  /**
+   * Whether to rotate the grid 180° when generating the FEN on Apply.
+   * Initialized from classifier's `suggestedFlip`; the user can toggle
+   * via the Flip button. Display stays image-aligned regardless.
+   */
+  const [flipOnApply, setFlipOnApply] = useState(false);
 
   const fileRef = useRef<HTMLInputElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -53,6 +70,9 @@ export function ImportFromImageModal({ open, onClose }: Props) {
       setClassification(null);
       setError(null);
       setBusy(false);
+      setOverrides({});
+      setPickerCell(null);
+      setFlipOnApply(false);
       if (blobUrlRef.current) {
         URL.revokeObjectURL(blobUrlRef.current);
         blobUrlRef.current = null;
@@ -104,11 +124,36 @@ export function ImportFromImageModal({ open, onClose }: Props) {
       if (det) setDetectConfidence(det.confidence);
       const result = await classifyBoard(img, q);
       setClassification(result);
+      // Initial classification seeds the apply-time flip from the
+      // classifier's heuristic. The user can flip it back via the Flip
+      // button if the heuristic guessed wrong.
+      setFlipOnApply(result.suggestedFlip);
+      // Re-classification (initial run OR corner drag) invalidates any
+      // user overrides — those were attached to rank/file coordinates which
+      // now refer to different physical squares.
+      setOverrides({});
+      setPickerCell(null);
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setBusy(false);
     }
+  };
+
+  /** Toggle the apply-time 180° flip. Display stays the same (image-aligned);
+   *  only the FEN we'd write is affected. */
+  const toggleFlip = () => setFlipOnApply((v) => !v);
+
+  /** Merge classification + overrides into the image-aligned grid. The
+   *  FEN-time rotation (if any) is applied separately in applyDetection. */
+  const mergedGrid = (): DetectedGrid | null => {
+    if (!classification) return null;
+    return classification.grid.map((row, r) =>
+      row.map((p, f) => {
+        const key = `${r}-${f}`;
+        return key in overrides ? overrides[key] : p;
+      }),
+    );
   };
 
   // Reclassify whenever the quad is dragged into a new position. We
@@ -117,7 +162,14 @@ export function ImportFromImageModal({ open, onClose }: Props) {
     if (!imageEl || !quad) return;
     const handle = window.setTimeout(() => {
       classifyBoard(imageEl, quad)
-        .then(setClassification)
+        .then((r) => {
+          setClassification(r);
+          setFlipOnApply(r.suggestedFlip);
+          // Overrides reference rank/file coords whose meaning just shifted
+          // (the drag moved the image-area each square sees). Drop them.
+          setOverrides({});
+          setPickerCell(null);
+        })
         .catch((e) => setError((e as Error).message));
     }, 80);
     return () => window.clearTimeout(handle);
@@ -127,11 +179,29 @@ export function ImportFromImageModal({ open, onClose }: Props) {
   }, [quad]);
 
   const applyDetection = () => {
-    if (!classification) return;
-    const piecePart = gridToFenPiecePart(classification.grid);
+    const merged = mergedGrid();
+    if (!merged) return;
+    // If the user (or autoOrient) flagged the image as Black-POV, rotate
+    // the image-aligned grid into the editor's white-at-bottom convention
+    // before serializing.
+    const final = flipOnApply ? flip180(merged) : merged;
+    const piecePart = gridToFenPiecePart(final);
     const fen = `${piecePart} w - - 0 1`;
     useSetupStore.getState().loadFen(fen);
     onClose();
+  };
+
+  /** Set/clear one cell's override. Pass `null` for "explicit empty" or
+   *  `undefined` to revert to whatever the classifier picked. */
+  const setOverride = (r: number, f: number, piece: FenPiece | null | undefined) => {
+    const key = `${r}-${f}`;
+    setOverrides((prev) => {
+      const next = { ...prev };
+      if (piece === undefined) delete next[key];
+      else next[key] = piece;
+      return next;
+    });
+    setPickerCell(null);
   };
 
   // ----- Corner-drag handling -----
@@ -243,13 +313,18 @@ export function ImportFromImageModal({ open, onClose }: Props) {
                 imageEl={imageEl}
                 quad={quad}
                 classification={classification}
+                overrides={overrides}
                 fenToGlyph={fenToGlyph}
                 onCornerPointerDown={(corner) => setDragging(corner)}
+                onCellClick={(r, f) => setPickerCell({ r, f })}
+                pickerCell={pickerCell}
+                onPickerPick={setOverride}
+                onPickerClose={() => setPickerCell(null)}
                 overlayRef={overlayRef}
               />
               <div className="flex items-center justify-between gap-2 text-xs">
                 <span className="text-ink-muted">
-                  Drag the 4 corners to line up with the board. The grid below shows what was detected.
+                  Drag the 4 corners to line up. Click any square to fix what was detected.
                 </span>
                 <button
                   className="text-ink-muted hover:text-ink underline underline-offset-2"
@@ -257,10 +332,44 @@ export function ImportFromImageModal({ open, onClose }: Props) {
                     setImageEl(null);
                     setQuad(null);
                     setClassification(null);
+                    setOverrides({});
+                    setPickerCell(null);
                   }}
                 >
                   pick another image
                 </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 text-[11px] text-ink-muted">
+                <button
+                  type="button"
+                  onClick={toggleFlip}
+                  className={clsx(
+                    'btn h-7 px-2 text-[11px]',
+                    flipOnApply && 'border-accent/60 bg-accent/10 text-accent',
+                  )}
+                  title={flipOnApply
+                    ? 'On apply, the position will be rotated 180° so White ends up at the bottom (editor convention)'
+                    : 'Click if your board view is from Black\'s side — we\'ll rotate on apply'}
+                  disabled={!classification}
+                >
+                  <FlipVertical size={11} /> Flip 180° on apply
+                </button>
+                {Object.keys(overrides).length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setOverrides({})}
+                    className="btn h-7 px-2 text-[11px]"
+                    title="Drop your per-square corrections; revert to what the classifier picked"
+                  >
+                    <RotateCcw size={11} /> Reset {Object.keys(overrides).length} edit{Object.keys(overrides).length === 1 ? '' : 's'}
+                  </button>
+                )}
+                {flipOnApply && (
+                  <span className="inline-flex items-center gap-1 text-accent">
+                    Image looks Black-POV — will rotate so White is at the bottom.
+                  </span>
+                )}
               </div>
 
               {detectConfidence > 0 && detectConfidence < 0.5 && (
@@ -331,15 +440,25 @@ function ImagePreview({
   imageEl,
   quad,
   classification,
+  overrides,
   fenToGlyph,
   onCornerPointerDown,
+  onCellClick,
+  pickerCell,
+  onPickerPick,
+  onPickerClose,
   overlayRef,
 }: {
   imageEl: HTMLImageElement;
   quad: BoardQuad;
   classification: ClassificationResult | null;
+  overrides: Record<string, FenPiece | null>;
   fenToGlyph: Record<string, string>;
   onCornerPointerDown: (corner: keyof BoardQuad) => void;
+  onCellClick: (r: number, f: number) => void;
+  pickerCell: { r: number; f: number } | null;
+  onPickerPick: (r: number, f: number, piece: FenPiece | null | undefined) => void;
+  onPickerClose: () => void;
   overlayRef: React.RefObject<HTMLDivElement | null>;
 }) {
   // Compute corner positions as percentages of the displayed image so the
@@ -378,10 +497,12 @@ function ImagePreview({
           height: `${(height / H) * 100}%`,
         }}
       />
-      {/* 8×8 grid overlaid with detected glyphs */}
+      {/* 8×8 grid overlaid with detected glyphs.
+          Each cell captures clicks → opens the piece picker. Overrides
+          (if any) win over the classifier's pick for display + apply. */}
       {classification && (
         <div
-          className="absolute grid pointer-events-none"
+          className="absolute grid"
           style={{
             left: `${(left / W) * 100}%`,
             top: `${(top / H) * 100}%`,
@@ -393,20 +514,55 @@ function ImagePreview({
         >
           {classification.grid.flatMap((row, r) =>
             row.map((piece, f) => {
+              const key = `${r}-${f}`;
+              const isOverridden = key in overrides;
+              const effective = isOverridden ? overrides[key] : piece;
               const conf = classification.confidence[r][f];
+              const lowConf = piece && conf < 0.4 && !isOverridden;
               return (
-                <div
-                  key={`${r}-${f}`}
+                <button
+                  type="button"
+                  key={key}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCellClick(r, f);
+                  }}
                   className={clsx(
-                    'flex items-center justify-center text-[18px] sm:text-[22px] leading-none select-none',
-                    piece && conf < 0.4 ? 'text-bad/80' : 'text-accent/90',
+                    'group relative flex items-center justify-center text-[18px] sm:text-[22px] leading-none select-none',
+                    'transition-colors',
+                    'hover:bg-accent/10 active:bg-accent/20 cursor-pointer',
+                    isOverridden && 'ring-1 ring-inset ring-accent/70 bg-accent/10',
+                    lowConf && 'ring-1 ring-inset ring-bad/60 bg-bad/5',
                   )}
-                  style={{ textShadow: '0 1px 2px rgba(0,0,0,.8), 0 0 6px rgba(0,0,0,.6)' }}
+                  title={lowConf ? 'Low confidence — click to fix' : 'Click to change'}
                 >
-                  {piece ? fenToGlyph[piece] : ''}
-                </div>
+                  <span
+                    className={clsx(
+                      lowConf ? 'text-bad/90' : isOverridden ? 'text-accent' : 'text-accent/90',
+                    )}
+                    style={{ textShadow: '0 1px 2px rgba(0,0,0,.8), 0 0 6px rgba(0,0,0,.6)' }}
+                  >
+                    {effective ? fenToGlyph[effective] : ''}
+                  </span>
+                </button>
               );
             }),
+          )}
+          {pickerCell && (
+            <PiecePicker
+              r={pickerCell.r}
+              f={pickerCell.f}
+              fenToGlyph={fenToGlyph}
+              currentPiece={
+                `${pickerCell.r}-${pickerCell.f}` in overrides
+                  ? overrides[`${pickerCell.r}-${pickerCell.f}`]
+                  : (classification.grid[pickerCell.r][pickerCell.f] ?? null)
+              }
+              isOverridden={`${pickerCell.r}-${pickerCell.f}` in overrides}
+              onPick={(piece) => onPickerPick(pickerCell.r, pickerCell.f, piece)}
+              onRevert={() => onPickerPick(pickerCell.r, pickerCell.f, undefined)}
+              onClose={onPickerClose}
+            />
           )}
         </div>
       )}
@@ -426,5 +582,127 @@ function ImagePreview({
         />
       ))}
     </div>
+  );
+}
+
+/**
+ * Floating piece picker. Anchored to the clicked cell's position in the
+ * 8×8 grid so it doesn't drift when the modal is resized. Renders inside
+ * the grid container so the absolute coords are grid-relative.
+ *
+ * Layout: empty button + 6 white pieces + 6 black pieces, 2 rows of 7.
+ * Click outside (via a transparent backdrop button inside the grid) to
+ * dismiss without picking.
+ */
+function PiecePicker({
+  r,
+  f,
+  fenToGlyph,
+  currentPiece,
+  isOverridden,
+  onPick,
+  onRevert,
+  onClose,
+}: {
+  r: number;
+  f: number;
+  fenToGlyph: Record<string, string>;
+  currentPiece: FenPiece | null;
+  isOverridden: boolean;
+  onPick: (piece: FenPiece | null) => void;
+  onRevert: () => void;
+  onClose: () => void;
+}) {
+  // Position the picker just below the clicked cell, but flip above if the
+  // cell is in the bottom three rows (otherwise the picker overflows the
+  // grid). Horizontally, clamp to keep the picker inside the grid bounds.
+  const above = r >= 5;
+  const pieces: FenPiece[] = ['K', 'Q', 'R', 'B', 'N', 'P', 'k', 'q', 'r', 'b', 'n', 'p'];
+  // The grid is 8 columns of equal width — express position in grid units
+  // so the picker scales with the modal.
+  const cellCenterPct = ((f + 0.5) / 8) * 100;
+  const verticalEdgePct = above ? ((r) / 8) * 100 : ((r + 1) / 8) * 100;
+
+  return (
+    <>
+      {/* Click-anywhere-else dismiss layer. Sits over the whole grid
+          UNDER the picker (lower z-index) so cell hovers stay clickable
+          for re-targeting. */}
+      <button
+        type="button"
+        aria-label="Close piece picker"
+        onClick={onClose}
+        className="absolute inset-0 z-10 cursor-default"
+        style={{ background: 'transparent' }}
+      />
+      <div
+        role="dialog"
+        aria-label={`Edit square rank ${8 - r} file ${String.fromCharCode(97 + f)}`}
+        className="absolute z-20 panel p-1.5 flex flex-col gap-1 shadow-glass"
+        style={{
+          left: `${cellCenterPct}%`,
+          top: `${verticalEdgePct}%`,
+          transform: above ? 'translate(-50%, -100%)' : 'translate(-50%, 8%)',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="grid grid-cols-7 gap-0.5">
+          {/* Empty / clear */}
+          <button
+            type="button"
+            onClick={() => onPick(null)}
+            className={clsx(
+              'h-7 w-7 rounded text-xs flex items-center justify-center border',
+              currentPiece === null
+                ? 'border-accent/60 bg-accent/10 text-accent'
+                : 'border-edge hover:border-edge-strong text-ink-muted',
+            )}
+            title="Empty"
+          >
+            ∅
+          </button>
+          {pieces.slice(0, 6).map((p) => (
+            <PickerTile key={p} piece={p} glyph={fenToGlyph[p]} active={currentPiece === p} onClick={() => onPick(p)} />
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-0.5">
+          {pieces.slice(6).map((p) => (
+            <PickerTile key={p} piece={p} glyph={fenToGlyph[p]} active={currentPiece === p} onClick={() => onPick(p)} />
+          ))}
+          {/* Revert: only meaningful if there's currently an override on this cell. */}
+          <button
+            type="button"
+            onClick={onRevert}
+            disabled={!isOverridden}
+            className={clsx(
+              'h-7 w-7 rounded text-[10px] flex items-center justify-center border',
+              isOverridden
+                ? 'border-edge hover:border-edge-strong text-ink-muted'
+                : 'border-edge opacity-30 cursor-not-allowed text-ink-faint',
+            )}
+            title={isOverridden ? 'Revert to classifier' : 'No override on this square'}
+          >
+            ↺
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function PickerTile({ glyph, active, onClick }: { piece: FenPiece; glyph: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={clsx(
+        'h-7 w-7 rounded text-base leading-none flex items-center justify-center border',
+        active
+          ? 'border-accent/60 bg-accent/10 text-accent'
+          : 'border-edge hover:border-edge-strong text-ink',
+      )}
+    >
+      {glyph}
+    </button>
   );
 }

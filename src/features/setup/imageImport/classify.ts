@@ -1,6 +1,7 @@
 import type { FenPiece } from '@/core/store/setupStore';
 import { PIECE_SETS, type PieceCode } from '@/features/themes/piecesets';
 import type { BoardQuad, DetectedGrid, ClassificationResult } from './types';
+import { autoOrient, flip180 } from './orient';
 
 /**
  * Per-square piece classifier.
@@ -414,8 +415,16 @@ export async function classifyBoard(
   // unused-symbol noise without dropping it from the API surface.
   void meanLuma;
 
-  return { grid, confidence };
+  // Decide whether the IMAGE is likely viewed from Black's POV. We don't
+  // actually rotate the grid here — the modal needs glyphs to overlay the
+  // image as the user sees it, so display stays image-aligned and the
+  // flip is applied later, on Apply (or when the user toggles it off).
+  const oriented = autoOrient(grid);
+  return { grid, confidence, suggestedFlip: oriented.flipped };
 }
+
+// flip180 is re-exported for the modal's manual Flip + apply-time rotation.
+export { flip180 };
 
 /** Serialize a detected grid to a piece-placement FEN string (no side-to-
  *  move / castling / etc — those parts are the caller's). */

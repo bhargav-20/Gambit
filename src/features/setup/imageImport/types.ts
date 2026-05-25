@@ -24,9 +24,22 @@ export interface BoardQuad {
 export type DetectedGrid = (FenPiece | null)[][];
 
 /** Output of the classification pass — pieces + a confidence-ish score per
- *  square so the UI can flag low-confidence cells. */
+ *  square so the UI can flag low-confidence cells.
+ *
+ *  The grid is always image-aligned: `grid[0][0]` is the top-left square
+ *  of the image as the camera/screenshot saw it. Orientation is handled
+ *  later (`suggestedFlip` tells the UI whether the heuristic thinks the
+ *  image is Black-POV → the FEN should be rotated 180° on apply). Keeping
+ *  display image-aligned lets the user overlay glyphs onto the source
+ *  without a confusing mirror-image mismatch. */
 export interface ClassificationResult {
   grid: DetectedGrid;
   /** Same shape as grid; values in 0..1 where higher = more confident. */
   confidence: number[][];
+  /**
+   * True if the autoOrient heuristic thinks the image is viewed from
+   * Black's side (Black at the image bottom). The modal initializes its
+   * "flip on apply" toggle from this — the user can override.
+   */
+  suggestedFlip: boolean;
 }
