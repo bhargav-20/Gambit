@@ -6,6 +6,8 @@ import App from './App.tsx'
 import { useGameStore } from './core/store/gameStore'
 import { useUiStore } from './core/store/uiStore'
 import { usePuzzleStore } from './core/store/puzzleStore'
+import { useAnalysisStore } from './core/store/analysisStore'
+import { useBotStore } from './core/store/botStore'
 import { startPwa } from './features/pwa/register'
 
 // Register service worker + listen for the install prompt before render so
@@ -20,6 +22,8 @@ if (import.meta.env.DEV) {
     game: useGameStore,
     ui: useUiStore,
     puzzles: usePuzzleStore,
+    analysis: useAnalysisStore,
+    bot: useBotStore,
   };
 }
 

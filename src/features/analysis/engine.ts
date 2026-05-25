@@ -43,6 +43,21 @@ export class StockfishEngine {
   private currentFen: string | null = null;
   /** Monotonic id so stale callbacks from previous searches can be dropped. */
   private searchId = 0;
+  /**
+   * When we send `stop` to cancel an in-flight search, Stockfish emits a
+   * `bestmove` line for the canceled search. By the time that line arrives,
+   * we've already bumped searchId and set the next caller's listener — so
+   * the listener's `searchId !== myId` guard doesn't catch it (both ids are
+   * the new one). Set this flag at `stop` time so the next bestmove line is
+   * silently swallowed instead of being misattributed.
+   *
+   * Without this, the eval bar gets stuck on the previous search's snapshot
+   * after switching from a bot match to /analyze (the analysis listener
+   * receives the bot's stop-response bestmove, marks done, and nulls itself
+   * — then the real analysis info+bestmove arrive into a null listener and
+   * vanish).
+   */
+  private discardNextBestmove = false;
 
   /** Lazy-load the worker on first call. */
   async init(): Promise<void> {
@@ -74,14 +89,24 @@ export class StockfishEngine {
   async evaluate(fen: string, depth: number, onUpdate?: Listener): Promise<EvalSnapshot> {
     await this.init();
 
-    // Stop any in-flight search before starting a new one.
+    // Stop any in-flight search before starting a new one. Mark the
+    // stop-response bestmove for discard so it doesn't pollute the new
+    // search's listener (see discardNextBestmove field comment).
     if (this.currentListener) {
       this.send('stop');
+      this.discardNextBestmove = true;
     }
     this.searchId += 1;
     const myId = this.searchId;
     this.currentFen = fen;
     this.currentSnapshot = freshSnapshot();
+
+    // A bot game may have left Skill Level at a low value (e.g. 0 for the
+    // Novice preset). Reset to full strength so analysis is honest. Sticky
+    // setoptions get the right value for free if the engine was already at
+    // 20; this only differs after a bot game.
+    this.send('setoption name Skill Level value 20');
+    this.send('setoption name UCI_LimitStrength value false');
 
     return new Promise<EvalSnapshot>((resolve) => {
       this.currentListener = (snap) => {
@@ -111,7 +136,10 @@ export class StockfishEngine {
     opts: { skillLevel: number; movetimeMs: number },
   ): Promise<string | null> {
     await this.init();
-    if (this.currentListener) this.send('stop');
+    if (this.currentListener) {
+      this.send('stop');
+      this.discardNextBestmove = true;
+    }
     this.searchId += 1;
     const myId = this.searchId;
     this.currentFen = fen;
@@ -183,6 +211,14 @@ export class StockfishEngine {
     }
 
     if (line.startsWith('bestmove')) {
+      // If this is the stop-response from a search we already canceled,
+      // swallow it. Otherwise it would resolve the in-flight listener with
+      // the previous search's data (the searchId guard inside the listener
+      // can't tell, because both ids match the bumped value).
+      if (this.discardNextBestmove) {
+        this.discardNextBestmove = false;
+        return;
+      }
       // bestmove e2e4 ponder ...
       const tokens = line.split(/\s+/);
       const move = tokens[1] && tokens[1] !== '(none)' ? tokens[1] : null;
