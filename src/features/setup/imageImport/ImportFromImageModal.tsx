@@ -6,6 +6,7 @@ import { useSetupStore } from '@/core/store/setupStore';
 import type { FenPiece } from '@/core/store/setupStore';
 import { detectBoardQuad } from './detect';
 import { classifyBoard, gridToFenPiecePart, preloadTemplates, flip180 } from './classify';
+import { destToSource } from './warp';
 import type { BoardQuad, ClassificationResult, DetectedGrid, Point } from './types';
 
 interface Props {
@@ -473,12 +474,21 @@ function ImagePreview({
     { key: 'br', p: quad.br },
     { key: 'bl', p: quad.bl },
   ];
-  // For the detection grid overlay, use the quad's axis-aligned bounding
-  // box. (v1 only generates axis-aligned quads.)
-  const left = quad.tl.x;
-  const top = quad.tl.y;
-  const width = quad.tr.x - quad.tl.x;
-  const height = quad.bl.y - quad.tl.y;
+
+  /**
+   * Map a normalized cell coordinate (file ∈ [0,8], rank ∈ [0,8] in the
+   * axis-aligned warped board space) back to source-image pixel coords
+   * via the quad. Used to render glyphs + the picker at the right place
+   * on a perspective-distorted board.
+   *
+   * Memoizing on `quad` is not necessary — each render only invokes this
+   * 64 times for the glyphs plus a few for the picker, well under
+   * Hot-path territory.
+   */
+  const cellCenterInSource = (rank: number, file: number) => {
+    return destToSource(quad, { x: (file + 0.5) * 480 / 8, y: (rank + 0.5) * 480 / 8 }, 480);
+  };
+  const sourceToPct = (p: Point) => ({ left: `${(p.x / W) * 100}%`, top: `${(p.y / H) * 100}%` });
 
   return (
     <div
@@ -487,31 +497,27 @@ function ImagePreview({
       style={{ aspectRatio: `${W} / ${H}` }}
     >
       <img src={imageEl.src} alt="" className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none" draggable={false} />
-      {/* Translucent rectangle marking the detected board */}
-      <div
-        className="absolute border-2 border-accent/80 pointer-events-none"
-        style={{
-          left: `${(left / W) * 100}%`,
-          top: `${(top / H) * 100}%`,
-          width: `${(width / W) * 100}%`,
-          height: `${(height / H) * 100}%`,
-        }}
-      />
-      {/* 8×8 grid overlaid with detected glyphs.
-          Each cell captures clicks → opens the piece picker. Overrides
-          (if any) win over the classifier's pick for display + apply. */}
+      {/* Quad outline: SVG polygon connecting the 4 corners. Works for
+          arbitrary 4-sided shapes, not just axis-aligned rectangles. */}
+      <svg
+        className="absolute inset-0 w-full h-full pointer-events-none"
+        viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="none"
+      >
+        <polygon
+          points={`${quad.tl.x},${quad.tl.y} ${quad.tr.x},${quad.tr.y} ${quad.br.x},${quad.br.y} ${quad.bl.x},${quad.bl.y}`}
+          fill="none"
+          stroke="rgba(233, 180, 101, 0.8)"
+          strokeWidth={Math.max(2, Math.min(W, H) / 300)}
+        />
+      </svg>
+      {/* Per-cell glyph buttons. Each cell is positioned at its center
+          in source-image coords (computed via the quad's homography), so
+          glyphs track the board even when the quad is non-rectangular
+          (photo with perspective). Click area is a small circle around
+          the center — no per-cell polygon clipping needed. */}
       {classification && (
-        <div
-          className="absolute grid"
-          style={{
-            left: `${(left / W) * 100}%`,
-            top: `${(top / H) * 100}%`,
-            width: `${(width / W) * 100}%`,
-            height: `${(height / H) * 100}%`,
-            gridTemplateColumns: 'repeat(8, minmax(0, 1fr))',
-            gridTemplateRows: 'repeat(8, minmax(0, 1fr))',
-          }}
-        >
+        <>
           {classification.grid.flatMap((row, r) =>
             row.map((piece, f) => {
               const key = `${r}-${f}`;
@@ -519,6 +525,7 @@ function ImagePreview({
               const effective = isOverridden ? overrides[key] : piece;
               const conf = classification.confidence[r][f];
               const lowConf = piece && conf < 0.4 && !isOverridden;
+              const center = cellCenterInSource(r, f);
               return (
                 <button
                   type="button"
@@ -528,19 +535,22 @@ function ImagePreview({
                     onCellClick(r, f);
                   }}
                   className={clsx(
-                    'group relative flex items-center justify-center text-[18px] sm:text-[22px] leading-none select-none',
+                    'absolute -translate-x-1/2 -translate-y-1/2',
+                    'w-[7%] aspect-square rounded-full',
+                    'flex items-center justify-center text-[14px] sm:text-[18px] leading-none select-none',
                     'transition-colors',
-                    'hover:bg-accent/10 active:bg-accent/20 cursor-pointer',
-                    isOverridden && 'ring-1 ring-inset ring-accent/70 bg-accent/10',
-                    lowConf && 'ring-1 ring-inset ring-bad/60 bg-bad/5',
+                    'hover:bg-accent/15 active:bg-accent/25 cursor-pointer',
+                    isOverridden && 'bg-accent/15 ring-1 ring-accent/70',
+                    lowConf && 'bg-bad/10 ring-1 ring-bad/60',
                   )}
+                  style={sourceToPct(center)}
                   title={lowConf ? 'Low confidence — click to fix' : 'Click to change'}
                 >
                   <span
                     className={clsx(
-                      lowConf ? 'text-bad/90' : isOverridden ? 'text-accent' : 'text-accent/90',
+                      lowConf ? 'text-bad' : isOverridden ? 'text-accent' : 'text-accent/95',
                     )}
-                    style={{ textShadow: '0 1px 2px rgba(0,0,0,.8), 0 0 6px rgba(0,0,0,.6)' }}
+                    style={{ textShadow: '0 1px 2px rgba(0,0,0,.85), 0 0 8px rgba(0,0,0,.7)' }}
                   >
                     {effective ? fenToGlyph[effective] : ''}
                   </span>
@@ -552,6 +562,8 @@ function ImagePreview({
             <PiecePicker
               r={pickerCell.r}
               f={pickerCell.f}
+              positionPct={sourceToPct(cellCenterInSource(pickerCell.r, pickerCell.f))}
+              above={pickerCell.r >= 5}
               fenToGlyph={fenToGlyph}
               currentPiece={
                 `${pickerCell.r}-${pickerCell.f}` in overrides
@@ -564,7 +576,7 @@ function ImagePreview({
               onClose={onPickerClose}
             />
           )}
-        </div>
+        </>
       )}
       {/* Corner-drag handles */}
       {corners.map(({ key, p }) => (
@@ -597,6 +609,8 @@ function ImagePreview({
 function PiecePicker({
   r,
   f,
+  positionPct,
+  above,
   fenToGlyph,
   currentPiece,
   isOverridden,
@@ -606,6 +620,13 @@ function PiecePicker({
 }: {
   r: number;
   f: number;
+  /** Anchor point in the overlay container's percentage coords. Already
+   *  passed through the homography by the caller — perspective-aware. */
+  positionPct: { left: string; top: string };
+  /** If true, render the picker above the anchor; otherwise below. The
+   *  caller decides based on rank (>=5 = render above so we don't
+   *  overflow the bottom of the image). */
+  above: boolean;
   fenToGlyph: Record<string, string>;
   currentPiece: FenPiece | null;
   isOverridden: boolean;
@@ -613,19 +634,11 @@ function PiecePicker({
   onRevert: () => void;
   onClose: () => void;
 }) {
-  // Position the picker just below the clicked cell, but flip above if the
-  // cell is in the bottom three rows (otherwise the picker overflows the
-  // grid). Horizontally, clamp to keep the picker inside the grid bounds.
-  const above = r >= 5;
   const pieces: FenPiece[] = ['K', 'Q', 'R', 'B', 'N', 'P', 'k', 'q', 'r', 'b', 'n', 'p'];
-  // The grid is 8 columns of equal width — express position in grid units
-  // so the picker scales with the modal.
-  const cellCenterPct = ((f + 0.5) / 8) * 100;
-  const verticalEdgePct = above ? ((r) / 8) * 100 : ((r + 1) / 8) * 100;
 
   return (
     <>
-      {/* Click-anywhere-else dismiss layer. Sits over the whole grid
+      {/* Click-anywhere-else dismiss layer. Sits over the whole overlay
           UNDER the picker (lower z-index) so cell hovers stay clickable
           for re-targeting. */}
       <button
@@ -640,9 +653,13 @@ function PiecePicker({
         aria-label={`Edit square rank ${8 - r} file ${String.fromCharCode(97 + f)}`}
         className="absolute z-20 panel p-1.5 flex flex-col gap-1 shadow-glass"
         style={{
-          left: `${cellCenterPct}%`,
-          top: `${verticalEdgePct}%`,
-          transform: above ? 'translate(-50%, -100%)' : 'translate(-50%, 8%)',
+          left: positionPct.left,
+          top: positionPct.top,
+          // Shift relative to the anchor: half-width left, fully above or
+          // slightly below. The vertical offset uses a small percentage of
+          // the picker's own height so it doesn't fight the anchor's
+          // visual center.
+          transform: above ? 'translate(-50%, calc(-100% - 6px))' : 'translate(-50%, calc(6px))',
         }}
         onClick={(e) => e.stopPropagation()}
       >

@@ -2,6 +2,7 @@ import type { FenPiece } from '@/core/store/setupStore';
 import { PIECE_SETS, type PieceCode } from '@/features/themes/piecesets';
 import type { BoardQuad, DetectedGrid, ClassificationResult } from './types';
 import { autoOrient, flip180 } from './orient';
+import { warpBoard } from './warp';
 
 /**
  * Per-square piece classifier.
@@ -305,17 +306,24 @@ export async function classifyBoard(
   source: HTMLCanvasElement | HTMLImageElement,
   quad: BoardQuad,
 ): Promise<ClassificationResult> {
-  // Render the source into a working canvas so we can extractImageData
-  // from it. If `source` is already a canvas with willReadFrequently set
-  // this is a no-op; otherwise it's a one-time copy.
-  const sourceCanvas = document.createElement('canvas');
-  const srcW = 'naturalWidth' in source ? source.naturalWidth : source.width;
-  const srcH = 'naturalHeight' in source ? source.naturalHeight : source.height;
-  sourceCanvas.width = srcW;
-  sourceCanvas.height = srcH;
-  const srcCtx = sourceCanvas.getContext('2d', { willReadFrequently: true });
-  if (!srcCtx) throw new Error('No 2D context for classify source');
-  srcCtx.drawImage(source, 0, 0);
+  // Perspective-correct the board region of the source into a flat
+  // 480×480 axis-aligned canvas. This lets the rest of the classifier
+  // pretend the board was always axis-aligned — extractSquare slices
+  // 60×60 cells from the warped canvas with no homography awareness.
+  //
+  // For axis-aligned screenshots (the v1 case), the homography is a
+  // simple scale + translate and the warp is equivalent to drawImage
+  // with a rect source slice — same accuracy, tiny extra cost.
+  const WARP_SIZE = 480;
+  const warped = warpBoard(source, quad, WARP_SIZE);
+  const warpedQuad: BoardQuad = {
+    tl: { x: 0, y: 0 },
+    tr: { x: WARP_SIZE, y: 0 },
+    br: { x: WARP_SIZE, y: WARP_SIZE },
+    bl: { x: 0, y: WARP_SIZE },
+  };
+  const srcCtx = warped.getContext('2d', { willReadFrequently: true });
+  if (!srcCtx) throw new Error('No 2D context for warped canvas');
 
   const templates = await getTemplates();
   const N = SQUARE_SIZE * SQUARE_SIZE;
@@ -335,7 +343,7 @@ export async function classifyBoard(
   const squares: SquareCtx[] = [];
   for (let rank = 0; rank < 8; rank++) {
     for (let file = 0; file < 8; file++) {
-      const sq = extractSquare(srcCtx, quad, rank, file);
+      const sq = extractSquare(srcCtx, warpedQuad, rank, file);
       const luma = lumaBuffer(sq);
       const med = median(luma);
       const sil = silhouetteMask(luma, med);
